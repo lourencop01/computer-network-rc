@@ -25,26 +25,21 @@ void safe_stop(int signal) {
     exit(0);
 }
 
-int main(void) {
+int tcp_client() {
 
     struct addrinfo hints, *res; //hints: info we want, res: info we get
     int fd; //fd: file descriptor
     ssize_t nwritten, nread; //number of bytes written and read
     char *ptr, buffer[BUFSIZE]; //pointer to buffer and buffer to store data
 
-    struct sigaction stop; // CTRL_C signal handler
-    memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s
-    stop.sa_handler = safe_stop; // set handler to safe_stop function
-    check(sigaction(SIGINT, &stop, NULL) == -1); // set signal handler to safe_stop for SIGINT
-
-    check((fd = socket(AF_INET,SOCK_STREAM,0)) == -1); //TCP socket
+    check((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1); //TCP socket
     memset(&hints,0,sizeof(hints));
     hints.ai_family=AF_INET; //IPv4
     hints.ai_socktype = SOCK_STREAM; //TCP socket
 
-    check((getaddrinfo("localhost", PORT, &hints, &res)) != 0);
+    check((getaddrinfo("localhost", PORT, &hints, &res)) != 0); //get address info
 
-    check((connect(fd, res->ai_addr, res->ai_addrlen)) == -1);
+    check((connect(fd, res->ai_addr, res->ai_addrlen)) == -1); //connect to server
 
     //TODO : CHECK IF SERVER IS UP
 
@@ -69,7 +64,37 @@ int main(void) {
 
     }
 
+    freeaddrinfo(res); // free address info
     close(fd);
 
+}
+
+int udp_client() {
+
+    while(true) {
+        sleep(1);
+    }
+
+}
+
+int main(int argc, char *argv[]) {
+
+    (void) argc; // unused
+
+    struct sigaction stop; // CTRL_C signal handler
+
+    memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s
+    stop.sa_handler = safe_stop; // set handler to safe_stop function
+    check(sigaction(SIGINT, &stop, NULL) == -1); // set signal handler to safe_stop for SIGINT
+
+    if(atoi(argv[1]) == 1) {
+        cout << "Client joined TCP" << endl;
+        tcp_client();
+    } else if(atoi(argv[1]) == 2) {
+        cout << "Client joined UDP" << endl;
+        udp_client();
+    }
+
     exit(0);
+
 }
