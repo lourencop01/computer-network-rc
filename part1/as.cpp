@@ -8,7 +8,7 @@
 #include <signal.h>
 #include <errno.h>
 
-#define PORT "58001"
+#define PORT "58070"
 #define BUFSIZE 128
 #define MAXQUEUE 5
 
@@ -51,9 +51,7 @@ int tcp_server() {
     hints.ai_flags = AI_PASSIVE; // use local IP address
 
     check(getaddrinfo(NULL, PORT, &hints, &res) != 0); // get address info
-    cout << "0.4" << endl;
     check(::bind(fd, res->ai_addr, res->ai_addrlen) == -1); // bind socket to address
-    cout << "0.5" << endl;
     check(listen(fd, 5) == -1); // listen for connections
 
     freeaddrinfo(res); // free address info
@@ -68,13 +66,13 @@ int tcp_server() {
         if(pid == 0){ // child process
             close(fd); // close listening socket TODO: WHY??
             while((n = read(newfd, buffer, BUFSIZE)) > 0) { // read from socket
+                cout << "TCP received: "<< buffer << endl;
                 ptr = buffer;
                 while(n > 0) { // while there is data to be written
                     check((nw = write(newfd, ptr, n)) <= 0); // write to socket
                     n -= nw; // update number of bytes to be written
                     ptr += nw; // update pointer to buffer
                 }
-                cout << buffer << endl;
             }
             close(newfd); // close socket
             exit(0); // exit child process
@@ -109,14 +107,17 @@ int udp_server() {
     check(::bind(fd, res->ai_addr, res->ai_addrlen) == -1); // bind socket to address
 
     while(true) {
+
         addrlen = sizeof(addr); // set address length
 
         check((n = recvfrom(fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr, &addrlen)) == -1); // receive data from socket
         write(1, "UDP received: ", 14); // write to stdout
+        write(1, endl, 1); // write to stdout
         write(1, buffer, n); // write to stdout
 
         check((nw = sendto(fd, buffer, n, 0, (struct sockaddr*)&addr, addrlen)) == -1); // send data to socket
         check(n != nw); // check if sent all bytes
+        
     }
 
     freeaddrinfo(res); // free address info
