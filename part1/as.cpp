@@ -27,6 +27,54 @@ void safe_stop(int signal) {
     exit(0);
 }
 
+int udp_string_analysis(char *str) {
+
+    char *token, *token2, *token3;
+
+    token = strtok(str, " ");
+    token2 = strtok(NULL, " ");
+    token3 = strtok(NULL, " ");
+
+    if (token == NULL) {
+        return -1;
+    } else if(token2 == NULL) {
+        if(!strcmp(token, "logout") && token2 == NULL) {
+            return 1;
+        } else if(!strcmp(token, "unregister")) {
+            return 2;
+        } else if(!strcmp(token, "exit")) {
+            return 3;
+        } else if(!strcmp(token, "myauctions") || !strcmp(token, "ma")) {
+            return 6;
+        } else if(!strcmp(token, "mybids") || !strcmp(token, "mb")) {
+            return 7;
+        } else if(!strcmp(token, "list") || !strcmp(token, "l")) {
+            return 8;
+        }
+        return -1;
+    } else if (token3 == NULL && !strcmp(token2, "AID")) {
+        if(!strcmp(token, "show_asset") || !strcmp(token, "sa")) {
+            return 9;
+        } else if(!strcmp(token, "close")) {
+            return 5;
+        } else if(!strcmp(token, "show_record") || !strcmp(token, "sr")) {
+            return 11;
+        }
+        return -1;
+    } else if (token3 != NULL) {
+        if(!strcmp(token, "login") && !strcmp(token2, "UID") && !strcmp(token3, "password")) {
+            return 0;
+        } else if(!strcmp(token, "open") && !strcmp(token2, "name") && !strcmp(token3, "asset_fname") 
+                    && strcmp(strtok(NULL, " "), "start_value") && strcmp(strtok(NULL, " "), "timeactive")) {
+            return 4;
+        } else if((!strcmp(token, "bid") || !strcmp(token, "b")) && !strcmp(token2, "AID") && !strcmp(token3, "value")) {
+            return 10;
+        }
+        return -1;
+    }
+    return -1;
+}
+
 int tcp_server() {
 
     struct addrinfo hints, *res; // hints: info we want, res: info we get
@@ -112,8 +160,8 @@ int udp_server() {
 
         check((n = recvfrom(fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr, &addrlen)) == -1); // receive data from socket
         write(1, "UDP received: ", 14); // write to stdout
-        write(1, endl, 1); // write to stdout
         write(1, buffer, n); // write to stdout
+        cout << endl;
 
         check((nw = sendto(fd, buffer, n, 0, (struct sockaddr*)&addr, addrlen)) == -1); // send data to socket
         check(n != nw); // check if sent all bytes
@@ -136,7 +184,7 @@ int main() {
     check(sigaction(SIGINT, &stop, NULL) == -1); // set signal handler to safe_stop for SIGINT
 
     check((pid = fork()) == -1); // create child process
-    
+
     if(pid == 0) { // child process
         tcp_server();
     } else { // parent process

@@ -8,10 +8,13 @@
 #include <iostream>
 #include <signal.h>
 
-#define PORT "58070"
 #define BUFSIZE 128
 
 extern int errno;
+
+int password = 0;
+char UID[6] = "\0";
+char AID[6] = "\0";
 
 using namespace std;
 
@@ -26,7 +29,57 @@ void safe_stop(int signal) {
     exit(0);
 }
 
-int tcp_client() {
+char* udp_string_analysis(char *str) {
+
+    char *token, *token2, *token3;
+
+    token = strtok(str, " ");
+    token2 = strtok(NULL, " ");
+    token3 = strtok(NULL, " ");
+
+    if (token == NULL) {
+        return -1;
+    } else if(token2 == NULL) {
+        if(!strcmp(token, "logout") && token2 == NULL) {
+            return "LOU " + UID + " " + password;
+        } else if(!strcmp(token, "unregister")) {
+            return "UNR " + UID + " " + password;
+        } else if(!strcmp(token, "exit")) {
+            return 3;
+        } else if(!strcmp(token, "myauctions") || !strcmp(token, "ma")) {
+            return "LMA " + UID;
+        } else if(!strcmp(token, "mybids") || !strcmp(token, "mb")) {
+            return "LMB " + UID;
+        } else if(!strcmp(token, "list") || !strcmp(token, "l")) {
+            return "LST";
+        }
+        return -1;
+    } else if (token3 == NULL && !strcmp(token2, "AID")) {
+        strcpy(AID, token2);
+        if(!strcmp(token, "show_asset") || !strcmp(token, "sa")) {
+            return 9;
+        } else if(!strcmp(token, "close")) {
+            return 5;
+        } else if(!strcmp(token, "show_record") || !strcmp(token, "sr")) {
+            return "SRC " + AID;
+        }
+        return -1;
+    } else if (token3 != NULL) {
+        if(!strcmp(token, "login") && !strcmp(token2, "UID") && !strcmp(token3, "password")) {
+            strcpy(UID, token2); strcpy(password, token3);
+            return "LIN " + UID + " " + password;
+        } else if(!strcmp(token, "open") && !strcmp(token2, "name") && !strcmp(token3, "asset_fname") 
+                    && strcmp(strtok(NULL, " "), "start_value") && strcmp(strtok(NULL, " "), "timeactive")) {
+            return 4;
+        } else if((!strcmp(token, "bid") || !strcmp(token, "b")) && !strcmp(token2, "AID") && !strcmp(token3, "value")) {
+            return 10;
+        }
+        return -1;
+    }
+    return -1;
+}
+
+int tcp_client(char *asip, char *port) {
 
     struct addrinfo hints, *res; //hints: info we want, res: info we get
     int fd; //fd: file descriptor
@@ -38,7 +91,7 @@ int tcp_client() {
     hints.ai_family=AF_INET; //IPv4
     hints.ai_socktype = SOCK_STREAM; //TCP socket
 
-    check((getaddrinfo("localhost", PORT, &hints, &res)) != 0); //get address info
+    check((getaddrinfo(asip, port, &hints, &res)) != 0); //get address info
 
     check((connect(fd, res->ai_addr, res->ai_addrlen)) == -1); //connect to server
 
@@ -70,12 +123,15 @@ int tcp_client() {
 
 }
 
-int udp_client() {
+int udp_client(char *asip, char *port) {
 
     struct addrinfo hints, *res; //hints: info we want, res: info we get
     int fd; //fd: file descriptor
     ssize_t nwritten, nread; //number of bytes written and read
     char *ptr, buffer[BUFSIZE]; //pointer to buffer and buffer to store data
+    
+    char message[BUFSIZE];
+    memset(message, "\0", BUFSIZE);
         
     check((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1); //UDP socket
 
@@ -83,7 +139,7 @@ int udp_client() {
     hints.ai_family = AF_INET; // IPv4
     hints.ai_socktype = SOCK_DGRAM; // UDP socket
 
-    check(getaddrinfo("localhost", PORT, &hints, &res) != 0); // get address info
+    check(getaddrinfo(asip, port, &hints, &res) != 0); // get address info
 
     check((connect(fd, res->ai_addr, res->ai_addrlen)) == -1); // connect to server
 
@@ -92,6 +148,8 @@ int udp_client() {
         check((nread = read(0, buffer, BUFSIZE)) == -1); // read from stdin
         ptr = buffer; // pointer to buffer
         ptr[nread-1] = '\0'; // add null terminator to buffer
+
+        strcpy(message, udp_string_analysis(ptr));
 
         check((nwritten = write(fd, ptr, nread)) <= 0); // write to socket and store number of bytes written
         check(nread != nwritten); // check if wrote all bytes
@@ -112,6 +170,7 @@ int udp_client() {
 int main(int argc, char *argv[]) {
 
     (void) argc; // unused
+    (void) argv; // unused
 
     struct sigaction stop; // CTRL_C signal handler
 
@@ -119,14 +178,11 @@ int main(int argc, char *argv[]) {
     stop.sa_handler = safe_stop; // set handler to safe_stop function
     check(sigaction(SIGINT, &stop, NULL) == -1); // set signal handler to safe_stop for SIGINT
 
-    if(atoi(argv[1]) == 1) {
-        cout << "Client joined TCP" << endl;
-        tcp_client();
-    } else if(atoi(argv[1]) == 2) {
-        cout << "Client joined UDP" << endl;
-        udp_client();
-    }
+    char asip[32] = "localhost";
+    char port[6] = "58070";
 
+    udp_client(asip, port);
+    
     exit(0);
 
 }
