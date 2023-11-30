@@ -27,54 +27,6 @@ void safe_stop(int signal) {
     exit(0);
 }
 
-int udp_string_analysis(char *str) {
-
-    char *token, *token2, *token3;
-
-    token = strtok(str, " ");
-    token2 = strtok(NULL, " ");
-    token3 = strtok(NULL, " ");
-
-    if (token == NULL) {
-        return -1;
-    } else if(token2 == NULL) {
-        if(!strcmp(token, "logout") && token2 == NULL) {
-            return 1;
-        } else if(!strcmp(token, "unregister")) {
-            return 2;
-        } else if(!strcmp(token, "exit")) {
-            return 3;
-        } else if(!strcmp(token, "myauctions") || !strcmp(token, "ma")) {
-            return 6;
-        } else if(!strcmp(token, "mybids") || !strcmp(token, "mb")) {
-            return 7;
-        } else if(!strcmp(token, "list") || !strcmp(token, "l")) {
-            return 8;
-        }
-        return -1;
-    } else if (token3 == NULL && !strcmp(token2, "AID")) {
-        if(!strcmp(token, "show_asset") || !strcmp(token, "sa")) {
-            return 9;
-        } else if(!strcmp(token, "close")) {
-            return 5;
-        } else if(!strcmp(token, "show_record") || !strcmp(token, "sr")) {
-            return 11;
-        }
-        return -1;
-    } else if (token3 != NULL) {
-        if(!strcmp(token, "login") && !strcmp(token2, "UID") && !strcmp(token3, "password")) {
-            return 0;
-        } else if(!strcmp(token, "open") && !strcmp(token2, "name") && !strcmp(token3, "asset_fname") 
-                    && strcmp(strtok(NULL, " "), "start_value") && strcmp(strtok(NULL, " "), "timeactive")) {
-            return 4;
-        } else if((!strcmp(token, "bid") || !strcmp(token, "b")) && !strcmp(token2, "AID") && !strcmp(token3, "value")) {
-            return 10;
-        }
-        return -1;
-    }
-    return -1;
-}
-
 int tcp_server() {
 
     struct addrinfo hints, *res; // hints: info we want, res: info we get
