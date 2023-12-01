@@ -8,6 +8,8 @@
 #include <signal.h>
 #include <errno.h>
 
+#include "headers.h"
+
 #define PORT "58070"
 #define BUFSIZE 128
 #define MAXQUEUE 5
@@ -15,17 +17,6 @@
 extern int errno;
 
 using namespace std;
-
-/*
-* Checks if condition is true. In that case, exits with error code 1.
-*/
-void check(bool condition) { if(condition) exit(1); }
-
-void safe_stop(int signal) {
-    (void) signal;
-    cout << "\nExiting..." << endl;
-    exit(0);
-}
 
 int tcp_server() {
 

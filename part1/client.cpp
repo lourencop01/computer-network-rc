@@ -5,175 +5,60 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <string.h>
-#include <iostream>
 #include <signal.h>
-#include <errno.h>
 #include <string>
 #include <vector>
 #include <sstream>
+
+#include "headers.h"
 
 #define BUFSIZE 128
 
 using namespace std;
 
-extern int errno;
-
-class User{
-    public:
-        
-        string UID;
-        string password;
-        
-        User(string UID, string password) {
-            this->UID = UID;
-            this->password = password;
-        }
-
-        string getUID() {
-            return this->UID;
-        }
-
-        string getPassword() {
-            return this->password;
-        }
-
-        void setUID(string UID) {
-            this->UID = UID;
-        }
-
-        void setPassword(string password) {
-            this->password = password;
-        }
-};
-
 User user("", "");
 
-/*
-* Checks if condition is true. In that case, exits with error code 1.
-*/
-void check(bool condition) { if(condition) exit(1); }
+int main(int argc, char *argv[]) {
 
-void safe_stop(int signal) {
-    (void) signal;
-    cout << "\nExiting..." << endl;
+    (void) argc; // unused
+    (void) argv; // unused
+    char asip[32] = "localhost";
+    char port[6] = "58070";
+    
+    vector<string> message;
+
+    char buffer[BUFSIZE]; // buffer to store data
+
+    struct sigaction stop; // CTRL_C signal handler
+    
+    memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s
+    stop.sa_handler = safe_stop; // set handler to safe_stop function
+    check(sigaction(SIGINT, &stop, NULL) == -1); // set signal handler to safe_stop for SIGINT
+
+    while(true) {
+        
+        check((read(0, buffer, BUFSIZE)) == -1); // read from stdin
+        buffer[strlen(buffer)-1] = '\0'; // add null terminator to buffer
+
+        message = string_analysis(buffer);
+
+        if(message[0] == "udp") {
+            udp_message(asip, port, vector_to_string(message));
+        } else if(message[0] == "tcp") {
+            tcp_message(asip, port, vector_to_string(message));
+        } else {
+            cout << "Invalid command" << endl;
+        }
+
+        memset(buffer, '\0', BUFSIZE); // initialize buffer to '\0'
+
+    }
+    
     exit(0);
+
 }
 
-bool possible_UID(string UID) {
-    if(UID.size() != 6) {
-        return false;
-    }
-    for(size_t i = 0; i < UID.size(); i++) {
-        if(!isdigit(UID[i])) {
-            return false;
-        }
-    }
-    return true;
-}
-
-bool possible_password(string password) {
-    if(password.size() != 8) {
-        return false;
-    }
-    for(size_t i = 0; i < password.size(); i++) {
-        if(!isdigit(password[i]) && !isalpha(password[i])) {
-            return false;
-        }
-    }
-    return true;
-}
-
-bool possible_AID(string AID) {
-    if(AID.size() != 3) {
-        return false;
-    }
-    for(size_t i = 0; i < AID.size(); i++) {
-        if(!isdigit(AID[i])) {
-            return false;
-        }
-    }
-    return true;
-}
-
-string create_string(vector<string> message) {
-
-    string str = "";
-
-    message.erase(message.begin());
-
-    if(message.back() == "") {
-        message.pop_back();
-    }
-
-    for(size_t i = 0; i < message.size(); i++) {
-        str += message[i];
-        str += " ";
-    }
-
-    str.pop_back();
-
-    return str;
-}
-
-vector<string> string_analysis(char* str) {
-    
-    vector<string> message; // vector to store the final message
-    
-    istringstream iss(str); // istringstream to read each token
-    string token; // string to store each token
-
-    while (iss >> token) { 
-        message.push_back(token); 
-    }
-
-    if (message.empty()) {
-        // TODO
-        return message;
-    } else if (message.size() == 1) {
-        const string& firstToken = message[0];
-        if (firstToken == "logout") {
-            message = {"udp", "LOU", user.getUID(), user.getPassword()};
-        } else if (firstToken == "unregister") {
-            message = {"udp", "UNR", user.getUID(), user.getPassword()};
-        } else if (firstToken == "exit") {
-            // TODO
-        } else if (firstToken == "myauctions" || firstToken == "ma") {
-            message = {"udp", "LMA", user.getUID()};
-        } else if (firstToken == "mybids" || firstToken == "mb") {
-            message = {"udp", "LMB", user.getUID()};
-        } else if (firstToken == "list" || firstToken == "l") {
-            message = {"udp", "LST"};
-        }
-        // TODO
-    } else if (message.size() == 2 && possible_AID(message[1])) {
-        const string& command = message[0];
-        if (command == "show_asset" || command == "sa") {
-            // TODO
-        } else if (command == "close") {
-            // TODO
-        } else if (command == "show_record" || command == "sr") {
-            message = {"udp", "SRC", message[1]};
-        }
-        // TODO
-    } else if (message.size() >= 3) {
-        const string& command = message[0];
-        if (command == "login" && possible_UID(message[1]) && possible_password(message[2])) {
-            user.setUID(message[1]);
-            user.setPassword(message[2]);
-            message = {"udp", "LIN", user.getUID(), user.getPassword()};
-        } else if (command == "open" && message[1] == "name" && message[2] == "asset_fname" &&
-            message.size() >= 6 && message[3] == "start_value" && message[5] == "timeactive") {
-            // TODO
-        } else if ((command == "bid" || command == "b") && message[1] == "AID" && message[2] == "value") {
-            // TODO
-        }
-        // TODO
-    }
-    // TODO
-    return message;
-}
-
-int tcp_client(char *asip, char *port, string message) {
+int tcp_message(char *asip, char *port, string message) {
 
     (void) message; // unused
 
@@ -216,7 +101,7 @@ int tcp_client(char *asip, char *port, string message) {
     return 1;
 }
 
-int udp_client(char *asip, char *port, string message) {
+int udp_message(char *asip, char *port, string message) {
 
     struct addrinfo hints, *res; //hints: info we want, res: info we get
     int fd; //fd: file descriptor
@@ -236,7 +121,7 @@ int udp_client(char *asip, char *port, string message) {
 
     check(write(fd, buffer, message.size()) != (ssize_t) message.size()); // write to socket
 
-    memset(buffer, 0, BUFSIZE); // initialize buffer to 0s
+    memset(buffer, '\0', BUFSIZE); // initialize buffer to 0s
 
     check(read(fd, buffer, BUFSIZE) == -1); // read from socket TODO: CHANGE TO FORMATS
     check(/*TODO: APANHAR ERRO DO SERVIDOR SE ELE FECHAR*/false);
@@ -251,40 +136,57 @@ int udp_client(char *asip, char *port, string message) {
     return 1;
 }
 
-int main(int argc, char *argv[]) {
-
-    (void) argc; // unused
-    (void) argv; // unused
-    char asip[32] = "localhost";
-    char port[6] = "58070";
+vector<string> string_analysis(char* str) {
     
-    vector<string> message;
-
-    char buffer[BUFSIZE]; // pointer to buffer and buffer to store data
-
-    struct sigaction stop; // CTRL_C signal handler
+    vector<string> message; // vector to store the final message
     
-    memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s
-    stop.sa_handler = safe_stop; // set handler to safe_stop function
-    check(sigaction(SIGINT, &stop, NULL) == -1); // set signal handler to safe_stop for SIGINT
+    istringstream iss(str); // istringstream to read each token
+    string token; // string to store each token
 
-    while(true) {
-        
-        check((read(0, buffer, BUFSIZE)) == -1); // read from stdin
-        buffer[strlen(buffer)-1] = '\0'; // add null terminator to buffer
-
-        message = string_analysis(buffer);
-
-        if(message[0] == "udp") {
-            udp_client(asip, port, create_string(message));
-        } else if(message[0] == "tcp") {
-            tcp_client(asip, port, create_string(message));
-        } else {
-            cout << "Invalid command" << endl;
-        }
-
+    while (iss >> token) {
+        message.push_back(token); 
     }
-    
-    exit(0);
 
+    if (message.empty()) {
+        // TODO
+        return message;
+    } else if (message.size() == 1) {
+        if (message[0] == "logout") {
+            message = {"udp", "LOU", user.getUID(), user.getPassword()};
+        } else if (message[0] == "unregister") {
+            message = {"udp", "UNR", user.getUID(), user.getPassword()};
+        } else if (message[0] == "exit") {
+            // TODO
+        } else if (message[0] == "myauctions" || message[0] == "ma") {
+            message = {"udp", "LMA", user.getUID()};
+        } else if (message[0] == "mybids" || message[0] == "mb") {
+            message = {"udp", "LMB", user.getUID()};
+        } else if (message[0] == "list" || message[0] == "l") {
+            message = {"udp", "LST"};
+        }
+        // TODO
+    } else if (message.size() == 2 && possible_AID(message[1])) {
+        if (message[0] == "show_asset" || message[0] == "sa") {
+            // TODO
+        } else if (message[0] == "close") {
+            // TODO
+        } else if (message[0] == "show_record" || message[0] == "sr") {
+            message = {"udp", "SRC", message[1]};
+        }
+        // TODO
+    } else if (message.size() >= 3) {
+        if (message[0] == "login" && possible_UID(message[1]) && possible_password(message[2])) {
+            user.setUID(message[1]);
+            user.setPassword(message[2]);
+            message = {"udp", "LIN", user.getUID(), user.getPassword()};
+        } else if (message[0] == "open" && possible_auction_name(message[1]) && message[2] == "asset_fname" &&
+            message.size() == 5 && possible_start_value(message[3]) && possible_time_active(message[4])) {
+            // TODO
+        } else if ((message[0] == "bid" || message[0] == "b") && message[1] == "AID" && message[2] == "value") {
+            // TODO
+        }
+        // TODO
+    }
+    // TODO
+    return message;
 }
