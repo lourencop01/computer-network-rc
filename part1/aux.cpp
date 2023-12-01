@@ -92,6 +92,11 @@ bool possible_time_active(string time_active) {
     return true;
 }
 
+bool possible_fname(string fname) {
+    (void) fname;
+    return true;
+}
+
 string vector_to_string(vector<string> message) {
 
     string str = "";

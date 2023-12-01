@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
-#include <errno.h>
 
 #include "headers.h"
 
@@ -14,9 +13,28 @@
 #define BUFSIZE 128
 #define MAXQUEUE 5
 
-extern int errno;
-
 using namespace std;
+
+int main() {
+
+    pid_t pid;
+
+    struct sigaction stop; // CTRL_C signal handler
+    memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s
+    stop.sa_handler = safe_stop; // set handler to safe_stop function
+    check(sigaction(SIGINT, &stop, NULL) == -1); // set signal handler to safe_stop for SIGINT
+
+    check((pid = fork()) == -1); // create child process
+
+    if(pid == 0) { // child process
+        tcp_server();
+    } else { // parent process
+        udp_server();
+    }
+
+    return 0;
+
+}
 
 int tcp_server() {
 
@@ -115,25 +133,4 @@ int udp_server() {
     close(fd); // close socket
 
     return 0;
-}
-
-int main() {
-
-    pid_t pid;
-
-    struct sigaction stop; // CTRL_C signal handler
-    memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s
-    stop.sa_handler = safe_stop; // set handler to safe_stop function
-    check(sigaction(SIGINT, &stop, NULL) == -1); // set signal handler to safe_stop for SIGINT
-
-    check((pid = fork()) == -1); // create child process
-
-    if(pid == 0) { // child process
-        tcp_server();
-    } else { // parent process
-        udp_server();
-    }
-
-    return 0;
-
 }
