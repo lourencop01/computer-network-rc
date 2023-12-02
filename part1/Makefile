@@ -22,3 +22,7 @@ aux.o: aux.cpp headers.h
 
 clean:
 	rm -f as user *.o
+
+cleaner:
+	rm -f as user *.o USERS/*/*.txt
+	rm -r USERS/*

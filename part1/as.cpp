@@ -2,10 +2,15 @@
 #include <iostream>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include <string>
+#include <vector>
+#include <sstream>
+
 
 #include "headers.h"
 
@@ -19,6 +24,9 @@ int main() {
 
     pid_t pid;
 
+    Users users;
+    //users.load_users();
+
     struct sigaction stop; // CTRL_C signal handler
     memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s
     stop.sa_handler = safe_stop; // set handler to safe_stop function
@@ -27,16 +35,17 @@ int main() {
     check((pid = fork()) == -1); // create child process
 
     if(pid == 0) { // child process
-        tcp_server();
+        tcp_server(users);
     } else { // parent process
-        udp_server();
+        udp_server(users);
     }
 
     return 0;
 
 }
 
-int tcp_server() {
+int tcp_server(Users &users) {
+    (void) users; // unused
 
     struct addrinfo hints, *res; // hints: info we want, res: info we get
     int fd, newfd, ret; // file descriptors
@@ -95,14 +104,16 @@ int tcp_server() {
 
 }
 
-int udp_server() {
+int udp_server(Users &users) {
     
     struct addrinfo hints, *res;
     int fd; // file descriptor
-    ssize_t n, nw; // number of bytes read or written
+    ssize_t n; // number of bytes read
     struct sockaddr_in addr; // address of the server
     socklen_t addrlen; // size of the address
-    char buffer[BUFSIZE]; // buffer to store data
+    char *ptr, buffer[BUFSIZE]; // buffer to store data
+
+    ptr = buffer;
     
     check((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1 ); // create socket with UDP protocol
 
@@ -117,20 +128,111 @@ int udp_server() {
 
     while(true) {
 
+        memset(buffer, '\0', BUFSIZE); // initialize buffer to '\0'
+        ptr = buffer; // reset pointer to buffer
+
         addrlen = sizeof(addr); // set address length
 
         check((n = recvfrom(fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr, &addrlen)) == -1); // receive data from socket
-        write(1, "UDP received: ", 14); // write to stdout
-        write(1, buffer, n); // write to stdout
-        cout << endl;
+        ptr += n; // update pointer to end of buffer
+        cout << "UDP received: " << buffer << endl;
 
-        check((nw = sendto(fd, buffer, n, 0, (struct sockaddr*)&addr, addrlen)) == -1); // send data to socket
-        check(n != nw); // check if sent all bytes
-        
+        strcpy(ptr, vector_analysis(string_to_vector(buffer), users).c_str()); // convert buffer to vector
+
+        cout << "UDP sent: " << ptr << endl;
+
+        check(sendto(fd, ptr, BUFSIZE, 0, (struct sockaddr*)&addr, addrlen) == -1); // send data to socket
+
     }
 
     freeaddrinfo(res); // free address info
     close(fd); // close socket
 
     return 0;
+}
+
+string vector_analysis(vector<string> message, Users &users) {
+
+        if(message[0] == "LIN") { // What happens if user already logged in
+            return "RLI " + login(message[1].c_str(), message[2].c_str(), users);
+        } else if(message[0] == "logout") {
+            //logout(message[1]);
+        } else if(message[0] == "create") {
+            //create(message[1], message[2], message[3], message[4]);
+        } else if(message[0] == "delete") {
+            //delete_user(message[1], message[2]);
+        } else if(message[0] == "bid") {
+            //bid(message[1], message[2], message[3], message[4]);
+        } else if(message[0] == "search") {
+            //search(message[1], message[2], message[3]);
+        } else if(message[0] == "mybids") {
+            //mybids(message[1], message[2]);
+        } else if(message[0] == "auctions") {
+            //auctions(message[1], message[2]);
+        } else if(message[0] == "exit") {
+            //exit(0);
+        } else {
+            cout << "Invalid command" << endl;
+        }
+        return "TODO";
+
+}
+
+string login(const char* UID, const char* password, Users &users) {
+
+    User *user = users.get_user(UID);
+
+    if (user == nullptr) { // new user
+
+        string uid_pathname = "USERS/";
+        uid_pathname.append(UID);
+
+        string pass_pathname = uid_pathname + "/" + UID + "_pass.txt";
+        string login_pathname = uid_pathname + "/" + UID + "_login.txt";
+        string hosted_pathname = uid_pathname + "/" + "HOSTED";
+        string bids_pathname = uid_pathname + "/" + "BIDDED";
+
+        users.add_user(User(UID, password, uid_pathname, pass_pathname, login_pathname, hosted_pathname, bids_pathname));
+
+        user = users.get_user(UID);
+
+        mkdir((user->get_uid_pathname()).c_str(), 0700);
+        mkdir((user->get_hosted_pathname()).c_str(), 0700);
+        mkdir((user->get_bids_pathname()).c_str(), 0700);
+
+        create_pass_file(*user);
+        create_login_file(*user);
+
+        return "REG";
+
+    } else if (user->is_unregistered()) { // user existed but unregistered
+        
+        // TODO : add hosted and bidded auctions to user vectors
+        user->re_register(password); 
+
+        create_pass_file(*user);
+        create_login_file(*user);
+
+        return "OK";
+
+    } else if (user->is_logged_out()) { // user exists, is registered, and logged out
+
+        if (user->getPassword() != password) {
+            return "NOK";
+        }
+
+        user->set_logged_in();
+
+        create_login_file(*user);
+
+        return "OK";
+
+    } else { // user already logged in
+        // TODO what to do in this case?
+        cout << "User already logged in" << endl;
+        return "LOG";
+    }
+
+    return "WEIRD";
+
 }

@@ -116,3 +116,47 @@ string vector_to_string(vector<string> message) {
 
     return str;
 }
+
+vector<string> string_to_vector(string str) {
+
+    vector<string> vec;
+    stringstream ss(str);
+    string tok;
+
+    while(getline(ss, tok, ' ')) {
+        vec.push_back(tok);
+    }
+
+    return vec;
+
+}
+
+ssize_t create_pass_file(User &user) {
+
+    FILE *fp = NULL;
+
+    fp = fopen((user.get_pass_pathname()).c_str(), "w");
+    if (fp == NULL) {
+        return -1;
+    }
+    fprintf(fp, "%s\n", user.getPassword().c_str());
+    fclose(fp);
+
+    return 0;
+
+}
+
+ssize_t create_login_file(User &user) {
+
+    FILE *fp = NULL;
+
+    fp = fopen((user.get_login_pathname()).c_str(), "w");
+    if (fp == NULL) {
+        return -1;
+    }
+    fprintf(fp, "Logged in\n");
+    fclose(fp);
+
+    return 0;
+
+}

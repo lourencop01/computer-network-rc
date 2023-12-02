@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     char asip[32] = "localhost";
     char port[6] = "58070";
     
-    User user;
+    User user("", "", "", "", "", "", "");
     
     vector<string> message;
 
@@ -130,9 +130,7 @@ int udp_message(char *asip, char *port, string message) {
     check(read(fd, buffer, BUFSIZE) == -1); // read from socket TODO: CHANGE TO FORMATS
     check(/*TODO: APANHAR ERRO DO SERVIDOR SE ELE FECHAR*/false);
 
-    write(1, "Server UDP: ", 12);
-    write(1, buffer, strlen(buffer)); // print to stdout content from socket
-    write(1, "\n", 1); // print newline to stdout
+    cout << "Server UDP replied: " << buffer << endl;
 
     freeaddrinfo(res); // free address info
     close(fd);
@@ -158,7 +156,7 @@ vector<string> string_analysis(char* str, User &user) {
 
         if (message[0] == "logout") { // LOGOUT
             message = {"udp", "LOU", user.getUID(), user.getPassword()};
-            user.logout();
+            user.erase();
 
         } else if (message[0] == "unregister") { // UNREGISTER
             message = {"udp", "UNR", user.getUID(), user.getPassword()};
