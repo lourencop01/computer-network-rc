@@ -154,9 +154,9 @@ int udp_server(Users &users) {
 string vector_analysis(vector<string> message, Users &users) {
 
         if(message[0] == "LIN") { // What happens if user already logged in
-            return "RLI " + login(message[1].c_str(), message[2].c_str(), users);
-        } else if(message[0] == "logout") {
-            //logout(message[1]);
+            return "RLI " + login(message[1], message[2], users);
+        } else if(message[0] == "LOU") {
+            return "RLO "+ logout(message[1].c_str(), message[2].c_str(), users);
         } else if(message[0] == "create") {
             //create(message[1], message[2], message[3], message[4]);
         } else if(message[0] == "delete") {
@@ -178,15 +178,13 @@ string vector_analysis(vector<string> message, Users &users) {
 
 }
 
-string login(const char* UID, const char* password, Users &users) {
+string login(string UID, string password, Users &users) {
 
     User *user = users.get_user(UID);
 
     if (user == nullptr) { // new user
 
-        string uid_pathname = "USERS/";
-        uid_pathname.append(UID);
-
+        string uid_pathname = "USERS/" + UID;
         string pass_pathname = uid_pathname + "/" + UID + "_pass.txt";
         string login_pathname = uid_pathname + "/" + UID + "_login.txt";
         string hosted_pathname = uid_pathname + "/" + "HOSTED";
@@ -231,6 +229,29 @@ string login(const char* UID, const char* password, Users &users) {
         // TODO what to do in this case?
         cout << "User already logged in" << endl;
         return "LOG";
+    }
+
+    return "WEIRD";
+
+}
+
+string logout(string UID, string password, Users &users) { // logged in and reg, logged out and reg, logged out and unr
+
+    User *user = users.get_user(UID);
+
+    if (user == nullptr) { // user is logged out or does not exist TODO what in this case?
+        return "NOK";
+
+    } else if (user->is_logged_out()) { // user exists, is registered, and logged out
+        return "111";
+
+    } else { // user exists, is registered, and logged in
+        if (user->getPassword() != password) {
+            return "111";
+        }
+        user->set_logged_out();
+        create_login_file(*user);
+        return "OK";
     }
 
     return "WEIRD";

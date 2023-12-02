@@ -103,7 +103,7 @@ string vector_to_string(vector<string> message) {
 
     message.erase(message.begin());
 
-    if(message.back() == "") {
+    while (message.back() == "") {
         message.pop_back();
     }
 

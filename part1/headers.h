@@ -180,6 +180,7 @@ vector<string> string_analysis(char* str, User &user);
 int tcp_server(Users &users);
 int udp_server(Users &users);
 string vector_analysis(vector<string> message, Users &users);
-string login(const char* UID, const char* password, Users &users);
+string login(string UID, string password, Users &users);
+string logout(string UID, string password, Users &users);
 
 #endif // AUX_H

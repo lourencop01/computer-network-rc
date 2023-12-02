@@ -160,6 +160,7 @@ vector<string> string_analysis(char* str, User &user) {
 
         } else if (message[0] == "unregister") { // UNREGISTER
             message = {"udp", "UNR", user.getUID(), user.getPassword()};
+            user.erase();
 
         } else if (message[0] == "exit") { // EXIT
             message = {"exit"};
