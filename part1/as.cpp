@@ -25,7 +25,8 @@ int main() {
     pid_t pid;
 
     Users users;
-    //users.load_users();
+    load_users(users);
+    users.print_all_users();
 
     struct sigaction stop; // CTRL_C signal handler
     memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s
@@ -99,6 +100,7 @@ int tcp_server(Users &users) {
             ret = close(newfd); // close socket
         } while(ret == -1 && errno == EINTR); // if interrupted by signal, try again
     }
+
     close(fd); // close listening socket
     return 1;
 
@@ -156,9 +158,9 @@ string vector_analysis(vector<string> message, Users &users) {
         if(message[0] == "LIN") { // What happens if user already logged in
             return "RLI " + login(message[1], message[2], users);
         } else if(message[0] == "LOU") {
-            return "RLO "+ logout(message[1].c_str(), message[2].c_str(), users);
-        } else if(message[0] == "create") {
-            //create(message[1], message[2], message[3], message[4]);
+            return "RLO "+ logout(message[1], message[2], users);
+        } else if(message[0] == "UNR") {
+            return "RUR " + unregister(message[1], message[2], users);
         } else if(message[0] == "delete") {
             //delete_user(message[1], message[2]);
         } else if(message[0] == "bid") {
@@ -172,17 +174,19 @@ string vector_analysis(vector<string> message, Users &users) {
         } else if(message[0] == "exit") {
             //exit(0);
         } else {
-            cout << "Invalid command" << endl;
+            return "ERR";
         }
-        return "TODO";
-
+    return "Weird";
 }
 
 string login(string UID, string password, Users &users) {
 
     User *user = users.get_user(UID);
 
-    if (user == nullptr) { // new user
+    if (!possible_UID(UID) || !possible_password(password)) {
+        return "ERR";
+
+    } else if (user == nullptr) { // new user
 
         string uid_pathname = "USERS/" + UID;
         string pass_pathname = uid_pathname + "/" + UID + "_pass.txt";
@@ -206,7 +210,7 @@ string login(string UID, string password, Users &users) {
     } else if (user->is_unregistered()) { // user existed but unregistered
         
         // TODO : add hosted and bidded auctions to user vectors
-        user->re_register(password); 
+        user->re_register(password);
 
         create_pass_file(*user);
         create_login_file(*user);
@@ -237,20 +241,63 @@ string login(string UID, string password, Users &users) {
 
 string logout(string UID, string password, Users &users) { // logged in and reg, logged out and reg, logged out and unr
 
+    cout << UID << endl;
     User *user = users.get_user(UID);
 
-    if (user == nullptr) { // user is logged out or does not exist TODO what in this case?
-        return "NOK";
+    if (!possible_UID(UID) || !possible_password(password)) {
+        return "ERR";
 
-    } else if (user->is_logged_out()) { // user exists, is registered, and logged out
-        return "111";
+    } else if (user == nullptr) { // user never existed (never registered before)
+        return "UNR";
+
+    } else if (user->is_logged_in() && user->is_unregistered()) {
+        return "IMPOSSIBLE";
+
+    } else if ((user->is_logged_out() && !(user->is_unregistered()))) { // user exists, is registered, and logged out
+        return "NOK";
 
     } else { // user exists, is registered, and logged in
         if (user->getPassword() != password) {
-            return "111";
+            return "NOK";
         }
         user->set_logged_out();
-        create_login_file(*user);
+        // Delete login file from user
+        
+        delete_login_file(*user);
+
+        return "OK";
+    }
+
+    return "WEIRD";
+
+}
+
+string unregister(string UID, string password, Users &users) { // logged in and reg, logged out and reg, logged out and unr
+
+    User *user = users.get_user(UID);
+
+    if (!possible_UID(UID) || !possible_password(password)) {
+        return "ERR";
+
+    } else if (user == nullptr) { // user never existed (never registered before)
+        return "UNR";
+
+    } else if (user->is_logged_in() && user->is_unregistered()) {
+        return "IMPOSSIBLE";
+
+    } else if ((user->is_logged_out() && !(user->is_unregistered()))) { // user exists, is registered, and logged out
+        return "NOK";
+
+    } else { // user exists, is registered, and logged in
+        if (user->getPassword() != password) {
+            return "NOK";
+        }
+        user->set_unregistered();
+        user->set_logged_out();
+        // Delete login file from user
+        delete_login_file(*user);
+        delete_pass_file(*user);
+
         return "OK";
     }
 

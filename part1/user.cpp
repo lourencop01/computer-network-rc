@@ -95,9 +95,7 @@ int tcp_message(char *asip, char *port, string message) {
     check((read(fd, buffer, BUFSIZE)) == -1); // read from socket TODO: CHANGE TO FORMATS
     check(/*TODO: APANHAR ERRO DO SERVIDOR SE ELE FECHAR*/false);
 
-    write(1, "Server TCP: ", 12); 
-    write(1, buffer, strlen(buffer)); // print to stdout content from socket
-    write(1, "\n", 1); // print newline to stdout
+    cout << "Server TCP replied: " << buffer << endl;
 
     freeaddrinfo(res); // free address info
     close(fd);
@@ -127,7 +125,7 @@ int udp_message(char *asip, char *port, string message) {
 
     memset(buffer, '\0', BUFSIZE); // initialize buffer to 0s
 
-    check(read(fd, buffer, BUFSIZE) == -1); // read from socket TODO: CHANGE TO FORMATS
+    check(read(fd, buffer, BUFSIZE) == -1); // read from socket
     check(/*TODO: APANHAR ERRO DO SERVIDOR SE ELE FECHAR*/false);
 
     cout << "Server UDP replied: " << buffer << endl;
@@ -149,18 +147,16 @@ vector<string> string_analysis(char* str, User &user) {
         message.push_back(token); 
     }
 
-    if (message.empty()) {
-        return message;
-
-    } else if (message.size() == 1) {
+    if (message.size() == 1) {
 
         if (message[0] == "logout") { // LOGOUT
             message = {"udp", "LOU", user.getUID(), user.getPassword()};
-            user.erase();
+            user.set_logged_out();
 
         } else if (message[0] == "unregister") { // UNREGISTER
             message = {"udp", "UNR", user.getUID(), user.getPassword()};
-            user.erase();
+            user.set_unregistered();
+            user.set_logged_out();
 
         } else if (message[0] == "exit") { // EXIT
             message = {"exit"};

@@ -1,9 +1,12 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <fstream>
 #include <cctype>
 #include <cstdlib>
 #include <iostream>
+#include <unistd.h>
+#include <dirent.h>
 
 #include "headers.h"
 
@@ -142,7 +145,7 @@ ssize_t create_pass_file(User &user) {
     fprintf(fp, "%s\n", user.getPassword().c_str());
     fclose(fp);
 
-    return 0;
+    return 1;
 
 }
 
@@ -157,6 +160,70 @@ ssize_t create_login_file(User &user) {
     fprintf(fp, "Logged in\n");
     fclose(fp);
 
-    return 0;
+    return 1;
 
+}
+
+ssize_t delete_login_file(User &user) {
+
+    unlink(user.get_login_pathname().c_str());
+
+    return 1;
+
+}
+
+ssize_t delete_pass_file(User &user) {
+
+    unlink(user.get_pass_pathname().c_str());
+
+    return 1;
+
+}
+
+void load_users(Users &users){
+    
+    DIR *dir;
+    struct dirent *ent;
+    string pathname = "USERS/";
+    User user("","","","","","","");
+
+    if ((dir = opendir(pathname.c_str())) != NULL) {
+        while ((ent = readdir(dir)) != NULL) {
+            if (ent->d_type == DT_DIR && ent->d_name[0] != '.') {
+                
+                string UID = ent->d_name;
+                user.setUID(UID);
+
+                user.set_uid_pathname(pathname + UID);
+                user.set_pass_pathname(pathname + UID + "/" + UID + "_pass.txt");
+                user.set_login_pathname(pathname + UID + "/" + UID + "_login.txt");
+                user.set_hosted_pathname(pathname + UID + "/" + "HOSTED");
+                user.set_bids_pathname(pathname + UID + "/" + "BIDDED");
+
+                string password = "";
+                ifstream pass_file(user.get_pass_pathname());
+                ifstream login_file(user.get_login_pathname());
+                
+                if (pass_file.is_open()) {
+                    getline(pass_file, password);
+                    pass_file.close();
+                    user.setPassword(password);
+                } else {
+                    user.set_unregistered();
+                }
+
+                if (login_file.is_open()) {
+                    login_file.close();
+                    user.set_logged_in();
+                } else {
+                    user.set_logged_out();
+                }
+
+                users.add_user(user);
+            }
+        }
+        closedir(dir);
+    } else {
+        perror("");
+    }
 }

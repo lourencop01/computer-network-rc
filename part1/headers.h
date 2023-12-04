@@ -32,34 +32,34 @@ class User {
             this->bids_pathname = bids_pathname;
         }
 
-        string getUID() {
-            return this->UID;
+        string getUID() const {
+        return this->UID;
         }
-        string getPassword() {
+        string getPassword() const {
             return this->password;
         }
-        bool is_logged_in() {
+        bool is_logged_in() const {
             return logged_in;
         }
-        bool is_logged_out() {
+        bool is_logged_out() const {
             return !logged_in;
         }
-        bool is_unregistered() {
+        bool is_unregistered() const {
             return unregistered;
         }
-        string get_uid_pathname() {
+        string get_uid_pathname() const {
             return this->uid_pathname;
         }
-        string get_pass_pathname() {
+        string get_pass_pathname() const {
             return this->pass_pathname;
         }
-        string get_login_pathname() {
+        string get_login_pathname() const {
             return this->login_pathname;
         }
-        string get_hosted_pathname() {
+        string get_hosted_pathname() const {
             return this->hosted_pathname;
         }
-        string get_bids_pathname() {
+        string get_bids_pathname() const {
             return this->bids_pathname;
         }
         void setUID(string UID) {
@@ -73,6 +73,27 @@ class User {
         }
         void set_logged_out() {
             this->logged_in = false;
+        }
+        void set_unregistered() {
+            this->unregistered = true;
+        }
+        void set_registered() {
+            this->unregistered = false;
+        }
+        void set_uid_pathname(string uid_pathname) {
+            this->uid_pathname = uid_pathname;
+        }
+        void set_pass_pathname(string pass_pathname) {
+            this->pass_pathname = pass_pathname;
+        }
+        void set_login_pathname(string login_pathname) {
+            this->login_pathname = login_pathname;
+        }
+        void set_hosted_pathname(string hosted_pathname) {
+            this->hosted_pathname = hosted_pathname;
+        }
+        void set_bids_pathname(string bids_pathname) {
+            this->bids_pathname = bids_pathname;
         }
         void add_hosted(int AID) {
             this->hosted.push_back(AID);
@@ -94,12 +115,6 @@ class User {
         void unregister() {
             this->password = "";
             this->unregistered = true;
-        }
-        void erase() {
-            this->UID = "";
-            this->password = "";
-            this->logged_in = false;
-            this->unregistered = false;
         }
 };
 
@@ -153,6 +168,35 @@ class Users {
             return nullptr;
         }
 
+        void print_all_users() {
+        for (const User &user : users) {
+            std::cout << "User Information:" << std::endl;
+            std::cout << "UID: " << user.getUID() << std::endl;
+            std::cout << "Password: " << user.getPassword() << std::endl;
+            std::cout << "Logged In: " << (user.is_logged_in() ? "true" : "false") << std::endl;
+            std::cout << "Unregistered: " << (user.is_unregistered() ? "true" : "false") << std::endl;
+            std::cout << "UID Pathname: " << user.get_uid_pathname() << std::endl;
+            std::cout << "Pass Pathname: " << user.get_pass_pathname() << std::endl;
+            std::cout << "Login Pathname: " << user.get_login_pathname() << std::endl;
+            std::cout << "Hosted Pathname: " << user.get_hosted_pathname() << std::endl;
+            std::cout << "Bids Pathname: " << user.get_bids_pathname() << std::endl;
+
+            std::cout << "Hosted Items: ";
+            for (int hosted : user.hosted) {
+                std::cout << hosted << " ";
+            }
+            std::cout << std::endl;
+
+            std::cout << "Bidded Items: ";
+            for (int bidded : user.bidded) {
+                std::cout << bidded << " ";
+            }
+            std::cout << std::endl;
+
+            std::cout << "-------------------------------------" << std::endl;
+        }
+    }
+
 };
 
 /* aux.c file functions */
@@ -170,6 +214,9 @@ vector<string> string_to_vector(string str);
 vector<string> string_analysis(char* str);
 ssize_t create_pass_file(User &user);
 ssize_t create_login_file(User &user);
+ssize_t delete_login_file(User &user);
+ssize_t delete_pass_file(User &user);
+void load_users(Users &users);
 
 /* user.cpp file functions */
 int tcp_message(char *asip, char *port, string message);
@@ -182,5 +229,6 @@ int udp_server(Users &users);
 string vector_analysis(vector<string> message, Users &users);
 string login(string UID, string password, Users &users);
 string logout(string UID, string password, Users &users);
+string unregister(string UID, string password, Users &users);
 
 #endif // AUX_H
