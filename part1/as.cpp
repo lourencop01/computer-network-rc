@@ -25,7 +25,7 @@ int main() {
     pid_t pid;
 
     Users users;
-    load_users(users);
+    load_users(users); // load users from USERS folder
     users.print_all_users();
 
     struct sigaction stop; // CTRL_C signal handler
@@ -155,14 +155,14 @@ int udp_server(Users &users) {
 
 string vector_analysis(vector<string> message, Users &users) {
 
-        if(message[0] == "LIN") { // What happens if user already logged in
+        if(message[0] == "LIN") { // Todo: What happens if user already logged in
             return "RLI " + login(message[1], message[2], users);
-        } else if(message[0] == "LOU") {
+        } else if(message[0] == "LOU") { // User requests for logout
             return "RLO "+ logout(message[1], message[2], users);
         } else if(message[0] == "UNR") {
             return "RUR " + unregister(message[1], message[2], users);
-        } else if(message[0] == "delete") {
-            //delete_user(message[1], message[2]);
+        } else if(message[0] == "mb" || "mybids") {
+            return "RMB " + mybids(message[1], message[2], users);
         } else if(message[0] == "bid") {
             //bid(message[1], message[2], message[3], message[4]);
         } else if(message[0] == "search") {
@@ -304,3 +304,8 @@ string unregister(string UID, string password, Users &users) { // logged in and 
     return "WEIRD";
 
 }
+
+string mybids(string UID, string password, Users &users) {
+
+}
+

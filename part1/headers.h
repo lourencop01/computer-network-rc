@@ -230,5 +230,6 @@ string vector_analysis(vector<string> message, Users &users);
 string login(string UID, string password, Users &users);
 string logout(string UID, string password, Users &users);
 string unregister(string UID, string password, Users &users);
+string mybids(string UID, string password, Users &users);
 
 #endif // AUX_H
