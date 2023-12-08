@@ -74,6 +74,8 @@ int tcp_message(char *asip, char *port, string message) {
     int fd; //fd: file descriptor
     char buffer[BUFSIZE]; //pointer to buffer and buffer to store data
 
+    memset(buffer, '\0', BUFSIZE); // initialize buffer to 0s
+
     strcpy(buffer, message.c_str());
 
     check((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1); //TCP socket
@@ -191,12 +193,14 @@ vector<string> string_analysis(char* str, User &user) {
 
         } else if (message[0] == "open" && possible_auction_name(message[1]) && possible_fname(message[2]) && //OPEN
             message.size() == 5 && possible_start_value(message[3]) && possible_time_active(message[4])) { 
-            message = {"tcp", "OPA", user.getUID(), user.getPassword(), message[1], message[3], message[4]};
+            message = {"tcp", "OPA", user.getUID(), user.getPassword(), message[1], message[3], message[4], message[2]};
 
         } else if ((message[0] == "bid" || message[0] == "b") && possible_AID(message[1]) && possible_start_value(message[2])) { // BID
             message = {"tcp", "BID", user.getUID(), user.getPassword(), message[1], message[2]};
         }
     }
-    
+
     return message;
 }
+
+// TODO LOAD INFORMATION FROM LAST USER IF NOT LOGGED OUT BEFORE CTRLC

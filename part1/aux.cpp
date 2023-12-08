@@ -7,6 +7,10 @@
 #include <iostream>
 #include <unistd.h>
 #include <dirent.h>
+#include <time.h>
+#include <fstream>
+#include <ctime>
+#include <iomanip>
 
 #include "headers.h"
 
@@ -64,7 +68,7 @@ bool possible_auction_name(string auction_name) {
         return false;
     }
     for(size_t i = 0; i < auction_name.size(); i++) {
-        if(!isalpha(auction_name[i]) && auction_name[i] != ' ') { // TODO: CHECK IF SPACE IS ALLOWED
+        if(!isalpha(auction_name[i]) && auction_name[i] != ' ') {
             return false;
         }
     }
@@ -84,7 +88,7 @@ bool possible_start_value(string start_value) {
 }
 
 bool possible_time_active(string time_active) {
-    if(time_active.size() < 5) {
+    if(time_active.size() > 5) {
         return false;
     }
     for(size_t i = 0; i < time_active.size(); i++) {
@@ -158,6 +162,49 @@ ssize_t create_login_file(User &user) {
         return -1;
     }
     fprintf(fp, "Logged in\n");
+    fclose(fp);
+
+    return 1;
+
+}
+
+ssize_t create_start_aid_file(Auction &auction) {
+
+    FILE *fp = NULL;
+
+    fp = fopen((auction.get_start_aid_pathname()).c_str(), "w");
+    if (fp == NULL) {
+        return -1;
+    }
+
+    // Get the current time
+    auto currentTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+    // Convert the current time to a string with the desired format
+    std::ostringstream oss;
+    oss << std::put_time(std::localtime(&currentTime), "%Y-%m-%d %H:%M:%S");
+    std::string timestampStr = oss.str();
+
+    fprintf(fp, "%s %s %s %s %s %s %ld\n", auction.get_hosted_by().c_str(), auction.get_name().c_str(), auction.get_asset_fname().c_str(),
+                                          to_string(auction.get_start_value()).c_str(), to_string(auction.get_time_active()).c_str(), 
+                                          timestampStr.c_str(), time(NULL));
+    fclose(fp);
+
+    return 1;
+
+}
+
+ssize_t create_hosted_file(User &user, Auction &auction) {
+
+    FILE *fp = NULL;
+
+    string hosted_pathname = user.get_hosted_pathname() + "/" + auction.get_AID() + ".txt";
+
+    fp = fopen(hosted_pathname.c_str(), "a");
+    if (fp == NULL) {
+        return -1;
+    }
+    fprintf(fp, "%s\n", auction.get_AID().c_str());
     fclose(fp);
 
     return 1;
