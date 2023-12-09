@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <thread>
+#include <mutex>
 
 
 #include "headers.h"
@@ -19,6 +21,8 @@
 #define MAXQUEUE 5
 
 using namespace std;
+
+mutex dataMutex;
 
 int main() {
 
@@ -37,13 +41,11 @@ int main() {
     stop.sa_handler = safe_stop; // set handler to safe_stop function
     check(sigaction(SIGINT, &stop, NULL) == -1); // set signal handler to safe_stop for SIGINT
 
-    check((pid = fork()) == -1); // create child process
+    std::thread udpThread(udp_server, std::ref(users), std::ref(auctions));
 
-    if(pid == 0) { // child process
-        tcp_server(users, auctions);
-    } else { // parent process
-        udp_server(users, auctions);
-    }
+    tcp_server(users, auctions);
+
+    udpThread.join();
 
     return 0;
 
@@ -393,14 +395,7 @@ string open(string UID, string password, string name, string start_value, string
 
     User *user = users.get_user(UID);
 
-    users.print_all_users();
-
     int AID = -1;
-
-    // test if user exists or is logged out or is unregistered
-    if (user == nullptr) return "1";
-    if (user->is_logged_out()) return "2";
-    if (user->is_unregistered()) return "3";
 
     if (user == nullptr || user->is_logged_out() || user->is_unregistered()) { // user never existed (never registered before) or logged out
         return "NLG";

@@ -24,5 +24,5 @@ clean:
 	rm -f as user *.o
 
 cleaner:
-	rm -f as user *.o USERS/*/*.txt
-	rm -r USERS/*
+	rm -f as user *.o USERS/*/*.txt AUCTIONS/*/*.txt
+	rm -r USERS/* AUCTIONS/*
