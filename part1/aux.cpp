@@ -11,6 +11,7 @@
 #include <fstream>
 #include <ctime>
 #include <iomanip>
+#include <sys/stat.h>
 
 #include "headers.h"
 
@@ -19,7 +20,7 @@ using namespace std;
 /*
 * Checks if condition is true. In that case, exits with error code 1.
 */
-void check(bool condition) { if(condition) exit(1); }
+void check(bool condition, string message) { if(condition) { cout << message << endl; exit(1); }}
 
 void safe_stop(int signal) {
     (void) signal;
@@ -227,6 +228,18 @@ ssize_t delete_pass_file(User &user) {
 
 }
 
+int check_file_size(const char *fname) {
+    struct stat filestat; 
+    int ret_stat;
+    
+    ret_stat = stat(fname, &filestat);
+
+    if ( ret_stat == -1 || filestat.st_size == 0)
+        return (0);
+    
+    return(filestat.st_size);
+}
+
 void load_users(Users &users){
     
     DIR *dir;
@@ -272,5 +285,30 @@ void load_users(Users &users){
         closedir(dir);
     } else {
         perror("");
+    }
+}
+
+void removeFirstNWords(char* buffer, char* output, std::size_t bufferSize, int n) {
+    std::istringstream iss(buffer);
+    std::ostringstream oss;
+
+    // Skip the first n words
+    for (int i = 0; i < n; ++i) {
+        std::string word;
+        iss >> word;
+    }
+
+    // Copy the rest of the string, ensuring it fits in the output buffer
+    oss << iss.rdbuf();
+    std::string result = oss.str();
+    std::size_t length = std::min(bufferSize - 1, result.size());
+
+    // Copy the result to the output buffer as a C string, starting from output[0]
+    std::copy(result.begin(), result.begin() + length, output);
+    output[length] = '\0';  // Null-terminate the C string
+
+    // Delete the first element from output (output[0])
+    for (std::size_t i = 0; i < length; ++i) {
+        output[i] = output[i + 1];
     }
 }

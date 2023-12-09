@@ -347,15 +347,13 @@ class Users {
         }
 
         User* get_user(string UID) {
-            cout << "get_user:" << endl;
-            cout << this->users.size() << endl;
             for (auto& user : this->users) {
                 if (user.getUID() == UID) {
                     return &user;
                 }
-    }
-    return nullptr;
-}
+            }
+            return nullptr;
+        }
 
         void print_all_users() {
         for (const User &user : users) {
@@ -387,7 +385,7 @@ class Users {
 };
 
 /* aux.c file functions */
-void check(bool condition);
+void check(bool condition, string message);
 void safe_stop(int signal);
 bool possible_UID(string UID);
 bool possible_password(string password);
@@ -407,6 +405,8 @@ ssize_t delete_login_file(User &user);
 ssize_t delete_pass_file(User &user);
 void load_users(Users &users);
 string intToThreeDigitString(int number);
+int check_file_size(const char *fname);
+void removeFirstNWords(char* buffer, char* output, std::size_t bufferSize, int n);
 
 /* user.cpp file functions */
 int tcp_message(char *asip, char *port, string message);

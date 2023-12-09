@@ -26,8 +26,6 @@ mutex dataMutex;
 
 int main() {
 
-    pid_t pid;
-
     Users users;
     load_users(users); // load users from USERS folder
     users.print_all_users();
@@ -39,7 +37,7 @@ int main() {
     struct sigaction stop; // CTRL_C signal handler
     memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s
     stop.sa_handler = safe_stop; // set handler to safe_stop function
-    check(sigaction(SIGINT, &stop, NULL) == -1); // set signal handler to safe_stop for SIGINT
+    check(sigaction(SIGINT, &stop, NULL) == -1, "as_40"); // set signal handler to safe_stop for SIGINT
 
     std::thread udpThread(udp_server, std::ref(users), std::ref(auctions));
 
@@ -50,85 +48,116 @@ int main() {
     return 0;
 
 }
-
+    
 int tcp_server(Users &users, Auctions &auctions) {
-    (void) users; // unused
-    (void) auctions; // unused
 
     struct addrinfo hints, *res; // hints: info we want, res: info we get
     int fd, newfd, ret; // file descriptors
-    ssize_t n, nw; // number of bytes read or written
     struct sockaddr_in addr; // address of the server
     socklen_t addrlen; // size of the address
-    
-    char *ptr, buffer[BUFSIZE]; // buffer to store data
-    memset(buffer, '\0', BUFSIZE); // initialize buffer to '\0'
-    
-    pid_t pid; // process id
 
-    struct sigaction act; // signal handler
-    memset(&act, 0, sizeof(act)); // initialize signal handler to 0s
-    act.sa_handler = SIG_IGN; // set handler to ignore the signal
-    check(sigaction(SIGCHLD, &act, NULL) == -1); // set signal handler to ignore SIGCHLD
+    int bytes_to_read = 0;
+    int read_bytes = 0;
+    FILE *asset_file = NULL;
 
-    check((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1); // create socket with TCP protocol
+    char buffer[BUFSIZE], reply[128];
+    memset(buffer, '\0', BUFSIZE);
+    memset(reply, '\0', 128);
 
-    memset(&hints, 0, sizeof(hints)); // initialize hints to 0s
-    hints.ai_family = AF_INET; // IPv4
-    hints.ai_socktype = SOCK_STREAM; // TCP socket
-    hints.ai_flags = AI_PASSIVE; // use local IP address
+    pid_t pid;
 
-    check(getaddrinfo(NULL, PORT, &hints, &res) != 0); // get address info
-    check(::bind(fd, res->ai_addr, res->ai_addrlen) == -1); // bind socket to address
-    check(listen(fd, 5) == -1); // listen for connections
+    struct sigaction act;
+    memset(&act, 0, sizeof(act));
+    act.sa_handler = SIG_IGN;
+    check(sigaction(SIGCHLD, &act, NULL) == -1, "as_74");
 
-    freeaddrinfo(res); // free address info
+    check((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1, "as_76");
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
 
-    ptr = buffer; // set pointer to buffer
+    check(getaddrinfo(NULL, PORT, &hints, &res) != 0, "as_83");
+    check(::bind(fd, res->ai_addr, res->ai_addrlen) == -1, "as_84");
+    check(listen(fd, 5) == -1, "as_85");
 
-    while(true) {
-        addrlen = sizeof(addr); // set address length
-        
-        do { 
-            newfd = accept(fd, (struct sockaddr*)&addr, &addrlen); // accept connection 
-        } while(newfd == -1 && errno == EINTR); // if interrupted by signal, try again
-        check(newfd == -1); // check if accept failed
+    freeaddrinfo(res);
 
-        check((pid = fork()) == -1); // create child process
+    while (true) {
+        addrlen = sizeof(addr);
 
-        if(pid == 0){ // child process
-            close(fd); // close listening socket TODO: WHY??
+        do {
+            newfd = accept(fd, (struct sockaddr*)&addr, &addrlen);
+        } while (newfd == -1 && errno == EINTR);
+        check(newfd == -1, "as_95");
 
-            while((n = read(newfd, buffer, BUFSIZE)) > 0) { // read from socket        
-                
-                cout << "TCP received: "<< buffer << endl;
-                
-                ptr += n; // reset pointer to buffer
-                
-                strcpy(ptr, vector_analysis(string_to_vector(buffer), users, auctions).c_str()); // convert buffer to vector and analyse request
+        check((pid = fork()) == -1, "as_97");
 
-                while(n > 0) { // while there is data to be written
-                    check((nw = write(newfd, ptr, n)) <= 0); // write to socket
-                    n -= nw; // update number of bytes to be written
-                    ptr += nw; // update pointer bytes written
+        if (pid == 0) {
+            close(fd);
+
+            read_bytes = read(newfd, buffer, BUFSIZE);
+            buffer[read_bytes] = '\0';
+
+            cout << "TCP received: " << buffer << endl;
+
+            if (string_to_vector(buffer)[0] == "OPA") {
+
+                vector<string> buffer_vec = string_to_vector(buffer);
+
+                strcpy(reply, vector_analysis(buffer_vec, users, auctions).c_str());
+
+                if (string_to_vector(reply)[1] == "OK") {
+
+                    string AID = string_to_vector(reply)[2];
+
+                    bytes_to_read = stoi(buffer_vec[7]);
+                    read_bytes = 0;
+
+                    asset_file = fopen(("AUCTIONS/" + AID + "/" + buffer_vec[6]).c_str(), "wb");
+                    if (asset_file == NULL) {
+                        cout << "Error creating asset file" << endl;
+                        return -1;
+                    }
+
+                    char ini_data[BUFSIZE];
+                    memset(ini_data, '\0', BUFSIZE);
+                    removeFirstNWords(buffer, ini_data, BUFSIZE, 8);
+                    cout << "ini_data: " << ini_data << endl;
+                    fwrite(ini_data, 1, strlen(ini_data), asset_file);
+                    bytes_to_read -= strlen(ini_data);
+                     
+                    while (bytes_to_read > 0) {
+                        memset(buffer, '\0', BUFSIZE);
+                        check((read_bytes = read(newfd, buffer, BUFSIZE)) == -1, "as_137");
+                        fwrite(buffer, 1, read_bytes, asset_file);
+                        bytes_to_read -= read_bytes;
+                    }
+
+                    fclose(asset_file);
                 }
 
-                memset(buffer, '\0', BUFSIZE); // initialize buffer to '\0'
-                ptr = buffer; // reset pointer to buffer
+            } else {
+
+                strcpy(reply, vector_analysis(string_to_vector(buffer), users, auctions).c_str());
 
             }
+            cout << "TCP sent: " << reply << endl;
+            check((write(newfd, reply, BUFSIZE)) <= 0, "as_150");
 
-            close(newfd); // close socket
-            exit(0); // exit child process
+            memset(buffer, '\0', BUFSIZE);
+            memset(reply, '\0', 128);
+
+            close(newfd);
+            exit(0);
         }
         do {
-            ret = close(newfd); // close socket
-        } while(ret == -1 && errno == EINTR); // if interrupted by signal, try again
+            ret = close(newfd);
+        } while (ret == -1 && errno == EINTR);
     }
 
-    close(fd); // close listening socket
+    close(fd);
     return 1;
-
 }
 
 int udp_server(Users &users, Auctions &auctions) {
@@ -142,16 +171,16 @@ int udp_server(Users &users, Auctions &auctions) {
 
     ptr = buffer;
     
-    check((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1 ); // create socket with UDP protocol
+    check((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1, "as_179"); // create socket with UDP protocol
 
     memset(&hints, 0, sizeof(hints)); // initialize hints to 0s
     hints.ai_family = AF_INET; // IPv4
     hints.ai_socktype = SOCK_DGRAM; // UDP socket
     hints.ai_flags = AI_PASSIVE; // use local IP address
 
-    check(getaddrinfo(NULL, PORT, &hints, &res) != 0); // get address info
+    check(getaddrinfo(NULL, PORT, &hints, &res) != 0, "as_186"); // get address info
 
-    check(::bind(fd, res->ai_addr, res->ai_addrlen) == -1); // bind socket to address
+    check(::bind(fd, res->ai_addr, res->ai_addrlen) == -1, "as_188"); // bind socket to address
 
     while(true) {
 
@@ -160,7 +189,7 @@ int udp_server(Users &users, Auctions &auctions) {
 
         addrlen = sizeof(addr); // set address length
 
-        check((n = recvfrom(fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr, &addrlen)) == -1); // receive data from socket
+        check((n = recvfrom(fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr, &addrlen)) == -1, "as_197"); // receive data from socket
         ptr += n; // update pointer to end of buffer
         cout << "UDP received: " << buffer << endl;
 
@@ -168,7 +197,7 @@ int udp_server(Users &users, Auctions &auctions) {
 
         cout << "UDP sent: " << ptr << endl;
 
-        check(sendto(fd, ptr, BUFSIZE, 0, (struct sockaddr*)&addr, addrlen) == -1); // send data to socket
+        check(sendto(fd, ptr, BUFSIZE, 0, (struct sockaddr*)&addr, addrlen) == -1, "as_205"); // send data to socket
 
     }
 

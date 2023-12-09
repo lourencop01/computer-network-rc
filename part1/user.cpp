@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <iostream>
 #include <sys/types.h>
@@ -13,6 +14,7 @@
 #include "headers.h"
 
 #define BUFSIZE 128
+#define MAXDATASIZE 1024
 
 using namespace std;
 
@@ -33,11 +35,11 @@ int main(int argc, char *argv[]) {
     
     memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s
     stop.sa_handler = safe_stop; // set handler to safe_stop function
-    check(sigaction(SIGINT, &stop, NULL) == -1); // set signal handler to safe_stop for SIGINT
+    check(sigaction(SIGINT, &stop, NULL) == -1, "us_38"); // set signal handler to safe_stop for SIGINT
 
     while(true) {
 
-        check((read(0, buffer, BUFSIZE)) == -1); // read from stdin
+        check((read(0, buffer, BUFSIZE)) == -1, "us_42"); // read from stdin
         buffer[strlen(buffer)-1] = '\0'; // add null terminator to buffer
 
         message = string_analysis(buffer, user);
@@ -69,41 +71,76 @@ int main(int argc, char *argv[]) {
 }
 
 int tcp_message(char *asip, char *port, string message) {
+    struct addrinfo hints, *res;
+    int fd, file_size = 0, bytes_read = 0;
+    char buffer[BUFSIZE], data[MAXDATASIZE];
+    FILE *file_fd = NULL;
 
-    struct addrinfo hints, *res; //hints: info we want, res: info we get
-    int fd; //fd: file descriptor
-    char buffer[BUFSIZE]; //pointer to buffer and buffer to store data
+    memset(buffer, '\0', BUFSIZE);
+    memset(data, '\0', MAXDATASIZE);
 
-    memset(buffer, '\0', BUFSIZE); // initialize buffer to 0s
+    check((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1, "us_85");
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+
+    check((getaddrinfo(asip, port, &hints, &res)) != 0, "us_90");
+    check((connect(fd, res->ai_addr, res->ai_addrlen)) == -1, "us_92");
+
+    if (message.substr(0, 3) == "OPA") {
+        vector<string> msg_str = string_to_vector(message);
+        file_fd = fopen(msg_str[6].c_str(), "rb");  // Open file in binary mode
+
+        if (file_fd == NULL) {
+            cout << "Error opening file or file doesn't exist." << endl;
+            return -1;
+        }
+
+        file_size = check_file_size(msg_str[6].c_str());
+        cout << "File size: " << file_size << endl;
+
+        // Append file size to the message
+        message += " " + to_string(file_size) + " ";
+    }
 
     strcpy(buffer, message.c_str());
+    cout << "buffer: " << buffer << endl;
 
-    check((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1); //TCP socket
-    memset(&hints,0,sizeof(hints));
-    hints.ai_family=AF_INET; //IPv4
-    hints.ai_socktype = SOCK_STREAM; //TCP socket
+    write(fd, buffer, strlen(buffer));
 
-    check((getaddrinfo(asip, port, &hints, &res)) != 0); //get address info
+    while (file_size > 0) {
 
-    check((connect(fd, res->ai_addr, res->ai_addrlen)) == -1); //connect to server
+        bytes_read = fread(data, 1, MAXDATASIZE, file_fd);
+        
+        // Write the bytes read from the file to the socket
+        ssize_t bytes_written = write(fd, data, bytes_read);
+        check(bytes_written != bytes_read, "us_117");
+        
+        file_size -= bytes_read;
+        cout << "file_size: " << file_size << endl;
 
-    //TODO : CHECK IF SERVER IS UP
+        
+        memset(data, '\0', MAXDATASIZE);
+        memset(buffer, '\0', BUFSIZE);
 
-    check((write(fd, buffer, message.size())) != (ssize_t)message.size()); // write to socket and store number of bytes written
+    }
 
-    memset(buffer, '\0', BUFSIZE); // initialize buffer to 0s
+    fclose(file_fd);
 
-    // QUESTION: DOES THE SERVER REPLY IN 1 GO OR IN CHUNKS?
-    check((read(fd, buffer, BUFSIZE)) == -1); // read from socket TODO: CHANGE TO FORMATS
-    check(/*TODO: APANHAR ERRO DO SERVIDOR SE ELE FECHAR*/false);
+    // Read the server's reply
+    memset(buffer, '\0', BUFSIZE);
+    check((read(fd, buffer, BUFSIZE)) == -1, "us_131");
+    
+    // TODO: Handle server's reply as needed
 
     cout << "Server TCP replied: " << buffer << endl;
 
-    freeaddrinfo(res); // free address info
+    freeaddrinfo(res);
     close(fd);
 
     return 1;
 }
+
 
 int udp_message(char *asip, char *port, string message) {
 
@@ -113,22 +150,22 @@ int udp_message(char *asip, char *port, string message) {
 
     strcpy(buffer, message.c_str());
         
-    check((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1); //UDP socket
+    check((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1, "us_147"); //UDP socket
 
     memset(&hints, 0, sizeof(hints)); // initialize hints to 0s
     hints.ai_family = AF_INET; // IPv4
     hints.ai_socktype = SOCK_DGRAM; // UDP socket
 
-    check(getaddrinfo(asip, port, &hints, &res) != 0); // get address info
+    check(getaddrinfo(asip, port, &hints, &res) != 0, "us_153"); // get address info
 
-    check((connect(fd, res->ai_addr, res->ai_addrlen)) == -1); // connect to server
+    check((connect(fd, res->ai_addr, res->ai_addrlen)) == -1, "us_155"); // connect to server
 
-    check(write(fd, buffer, message.size()) != (ssize_t) message.size()); // write to socket
+    check(write(fd, buffer, message.size()) != (ssize_t) message.size(), "us_157"); // write to socket
 
     memset(buffer, '\0', BUFSIZE); // initialize buffer to 0s
 
-    check(read(fd, buffer, BUFSIZE) == -1); // read from socket
-    check(/*TODO: APANHAR ERRO DO SERVIDOR SE ELE FECHAR*/false);
+    check(read(fd, buffer, BUFSIZE) == -1, "us_161"); // read from socket
+    check(/*TODO: APANHAR ERRO DO SERVIDOR SE ELE FECHAR*/false, "us_162");
 
     cout << "Server UDP replied: " << buffer << endl;
 
