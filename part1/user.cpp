@@ -106,7 +106,7 @@ int tcp_message(char *asip, char *port, string message) {
     strcpy(buffer, message.c_str());
     cout << "buffer: " << buffer << endl;
 
-    write(fd, buffer, strlen(buffer));
+    write(fd, buffer, BUFSIZE);
 
     while (file_size > 0) {
 
@@ -117,8 +117,6 @@ int tcp_message(char *asip, char *port, string message) {
         check(bytes_written != bytes_read, "us_117");
         
         file_size -= bytes_read;
-        cout << "file_size: " << file_size << endl;
-
         
         memset(data, '\0', MAXDATASIZE);
         memset(buffer, '\0', BUFSIZE);
@@ -129,7 +127,7 @@ int tcp_message(char *asip, char *port, string message) {
 
     // Read the server's reply
     memset(buffer, '\0', BUFSIZE);
-    check((read(fd, buffer, BUFSIZE)) == -1, "us_131");
+    check((read(fd, buffer, BUFSIZE)) == -1, "us_130");
     
     // TODO: Handle server's reply as needed
 

@@ -44,6 +44,7 @@ class Auction {
         string start_aid_pathname;
         string end_aid_pathname;
         string image_pathname;
+        long int start_time_1970;
 
         Auction(string AID, string name, string asset_fname, int start_value, int time_active, string hosted_by, string auction_pathname, string bids_pathname, string start_aid_pathname, string end_aid_pathname, string image_pathname) {
             this->AID = AID;
@@ -58,7 +59,16 @@ class Auction {
             this->start_aid_pathname = start_aid_pathname;
             this->end_aid_pathname = end_aid_pathname;
             this->image_pathname = image_pathname;
+            this->start_time_1970 = 0;
             this->bids = vector<Bid>();
+        }
+
+        void set_start_time_1970(long int start_time_1970) {
+            this->start_time_1970 = start_time_1970;
+        }
+
+        void set_status(int status) {
+            this->status = status;
         }
 
         string get_AID() const {
@@ -108,16 +118,19 @@ class Auction {
         string get_image_pathname() const {
             return this->image_pathname;
         }
+        long int get_start_time_1970() const {
+            return this->start_time_1970;
+        }
 };
 
 class Auctions {
     public:
         vector<Auction> auctions;
-        int AID_counter;
+        int* AID_counter;
 
-        Auctions() {
+        Auctions(int* sharedCounter) {
             this->auctions = vector<Auction>();
-            this->AID_counter = 0;
+            this->AID_counter = sharedCounter;
         }
 
         Auction* get_auction(string AID) {
@@ -134,10 +147,10 @@ class Auctions {
         }
 
         ssize_t add_auction(string name, string asset_fname, int start_value, int time_active, string hosted_by) {
-            if (this->AID_counter > 999) {
+            if (*AID_counter > 999) {
                 return -1;
             }
-            string AID_string = intToThreeDigitString(this->AID_counter);
+            string AID_string = intToThreeDigitString(*AID_counter);
             string auction_pathname = "AUCTIONS/" + AID_string;
             string bids_pathname = auction_pathname + "/" + "BIDS";
             string start_aid_pathname = auction_pathname + "/" + "START_" + AID_string + ".txt";
@@ -146,8 +159,8 @@ class Auctions {
 
             Auction auction(AID_string, name, asset_fname, start_value, time_active, hosted_by, auction_pathname, bids_pathname, start_aid_pathname, end_aid_pathname, image_pathname);
             this->auctions.push_back(auction);
-            this->AID_counter++;
-            return (AID_counter - 1);
+            *AID_counter += 1;
+            return (*AID_counter-1);
         }
         
         void remove_auction(Auction auction) {
@@ -406,7 +419,7 @@ ssize_t delete_pass_file(User &user);
 void load_users(Users &users);
 string intToThreeDigitString(int number);
 int check_file_size(const char *fname);
-void removeFirstNWords(char* buffer, char* output, std::size_t bufferSize, int n);
+void monitorAuctionEnd(Auction& auction);
 
 /* user.cpp file functions */
 int tcp_message(char *asip, char *port, string message);

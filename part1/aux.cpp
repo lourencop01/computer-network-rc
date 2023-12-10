@@ -12,6 +12,8 @@
 #include <ctime>
 #include <iomanip>
 #include <sys/stat.h>
+#include <chrono>
+#include <thread>
 
 #include "headers.h"
 
@@ -26,6 +28,18 @@ void safe_stop(int signal) {
     (void) signal;
     cout << "\nExiting..." << endl;
     exit(0);
+}
+
+int check_file_size(const char *fname) {
+    struct stat filestat; 
+    int ret_stat;
+    
+    ret_stat = stat(fname, &filestat);
+
+    if ( ret_stat == -1 || filestat.st_size == 0)
+        return (0);
+    
+    return(filestat.st_size);
 }
 
 bool possible_UID(string UID) {
@@ -186,13 +200,48 @@ ssize_t create_start_aid_file(Auction &auction) {
     oss << std::put_time(std::localtime(&currentTime), "%Y-%m-%d %H:%M:%S");
     std::string timestampStr = oss.str();
 
+    long int start_time_1970 = time(NULL);
+
     fprintf(fp, "%s %s %s %s %s %s %ld\n", auction.get_hosted_by().c_str(), auction.get_name().c_str(), auction.get_asset_fname().c_str(),
                                           to_string(auction.get_start_value()).c_str(), to_string(auction.get_time_active()).c_str(), 
-                                          timestampStr.c_str(), time(NULL));
+                                          timestampStr.c_str(), start_time_1970);
+
+    auction.set_start_time_1970(start_time_1970);
+
     fclose(fp);
 
     return 1;
 
+}
+
+ssize_t create_end_aid_file(Auction &auction) {
+    
+        FILE *fp = NULL;
+
+        //  check if end file already exists
+        if (check_file_size((auction.get_end_aid_pathname()).c_str()) != 0) {
+            return -1;
+        }
+    
+        fp = fopen((auction.get_end_aid_pathname()).c_str(), "w");
+        if (fp == NULL) {
+            return -1;
+        }
+    
+        // Get the current time
+        auto currentTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    
+        // Convert the current time to a string with the desired format
+        std::ostringstream oss;
+        oss << std::put_time(std::localtime(&currentTime), "%Y-%m-%d %H:%M:%S");
+        std::string timestampStr = oss.str();
+    
+        fprintf(fp, "%s %ld\n", timestampStr.c_str(), time(NULL) - auction.get_start_time_1970());
+        fclose(fp);
+
+        auction.set_status(0);
+    
+        return 1;
 }
 
 ssize_t create_hosted_file(User &user, Auction &auction) {
@@ -226,18 +275,6 @@ ssize_t delete_pass_file(User &user) {
 
     return 1;
 
-}
-
-int check_file_size(const char *fname) {
-    struct stat filestat; 
-    int ret_stat;
-    
-    ret_stat = stat(fname, &filestat);
-
-    if ( ret_stat == -1 || filestat.st_size == 0)
-        return (0);
-    
-    return(filestat.st_size);
 }
 
 void load_users(Users &users){
@@ -288,27 +325,18 @@ void load_users(Users &users){
     }
 }
 
-void removeFirstNWords(char* buffer, char* output, std::size_t bufferSize, int n) {
-    std::istringstream iss(buffer);
-    std::ostringstream oss;
+void monitorAuctionEnd(Auction& auction) {
+    //time_t endTime = auction.get_time_active() + auction.get_start_time_1970();
+    int time_active = auction.get_time_active();
 
-    // Skip the first n words
-    for (int i = 0; i < n; ++i) {
-        std::string word;
-        iss >> word;
+    while (time_active > 0) {
+        time_active = auction.get_time_active() - (time(NULL) - auction.get_start_time_1970());
+        this_thread::sleep_for(chrono::seconds(1));
+        if (check_file_size((auction.get_end_aid_pathname()).c_str()) != 0) {
+            return;
+        }
     }
 
-    // Copy the rest of the string, ensuring it fits in the output buffer
-    oss << iss.rdbuf();
-    std::string result = oss.str();
-    std::size_t length = std::min(bufferSize - 1, result.size());
-
-    // Copy the result to the output buffer as a C string, starting from output[0]
-    std::copy(result.begin(), result.begin() + length, output);
-    output[length] = '\0';  // Null-terminate the C string
-
-    // Delete the first element from output (output[0])
-    for (std::size_t i = 0; i < length; ++i) {
-        output[i] = output[i + 1];
-    }
+    // Auction has ended, create the END file
+    create_end_aid_file(auction);
 }

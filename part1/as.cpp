@@ -12,7 +12,7 @@
 #include <sstream>
 #include <thread>
 #include <mutex>
-
+#include <sys/mman.h>
 
 #include "headers.h"
 
@@ -23,6 +23,7 @@
 using namespace std;
 
 mutex dataMutex;
+thread timer_thread;
 
 int main() {
 
@@ -30,7 +31,10 @@ int main() {
     load_users(users); // load users from USERS folder
     users.print_all_users();
 
-    Auctions auctions;
+    int* sharedCounter = static_cast<int*>(mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0));
+    *sharedCounter = 0;
+
+    Auctions auctions(sharedCounter);
     //load_auctions(auctions); // load auctions from AUCTIONS folder TODO
     //auctions.print_all_auctions();
 
@@ -65,6 +69,8 @@ int tcp_server(Users &users, Auctions &auctions) {
     memset(reply, '\0', 128);
 
     pid_t pid;
+
+    size_t thread_created = 0;
 
     struct sigaction act;
     memset(&act, 0, sizeof(act));
@@ -119,13 +125,6 @@ int tcp_server(Users &users, Auctions &auctions) {
                         cout << "Error creating asset file" << endl;
                         return -1;
                     }
-
-                    char ini_data[BUFSIZE];
-                    memset(ini_data, '\0', BUFSIZE);
-                    removeFirstNWords(buffer, ini_data, BUFSIZE, 8);
-                    cout << "ini_data: " << ini_data << endl;
-                    fwrite(ini_data, 1, strlen(ini_data), asset_file);
-                    bytes_to_read -= strlen(ini_data);
                      
                     while (bytes_to_read > 0) {
                         memset(buffer, '\0', BUFSIZE);
@@ -135,6 +134,8 @@ int tcp_server(Users &users, Auctions &auctions) {
                     }
 
                     fclose(asset_file);
+
+                    thread_created = 1;
                 }
 
             } else {
@@ -149,6 +150,8 @@ int tcp_server(Users &users, Auctions &auctions) {
             memset(reply, '\0', 128);
 
             close(newfd);
+
+            if (thread_created) { timer_thread.join(); }
             exit(0);
         }
         do {
@@ -438,7 +441,6 @@ string open(string UID, string password, string name, string start_value, string
         if ((AID = auctions.add_auction(name, fname, stoi(start_value), stoi(time_active), UID)) == -1) {
             return "NOK";
         } else {
-            
             string AID_string = auctions.intToThreeDigitString(AID);
             Auction *auction = auctions.get_auction(AID_string);
             
@@ -447,10 +449,11 @@ string open(string UID, string password, string name, string start_value, string
             
             create_start_aid_file(*auction); // create START_AID.txt file
             // TODO copy asset_fname's file to the auction directory
+
+            timer_thread = thread(monitorAuctionEnd, ref(*auction)); // create thread to monitor auction end
             
             user->add_hosted(*auction); // add auction to user's hosted vector
             create_hosted_file(*user, *auction); // create HOSTED file
-            
             return "OK " + AID_string;
         }
         
