@@ -22,7 +22,6 @@
 
 using namespace std;
 
-mutex dataMutex;
 thread timer_thread;
 
 int main() {
@@ -213,17 +212,17 @@ int udp_server(Users &users, Auctions &auctions) {
 string vector_analysis(vector<string> message, Users &users, Auctions &auctions) {
 
         if(message[0] == "LIN") { // Todo: What happens if user already logged in
-            return "RLI " + login(message[1], message[2], users);
+            return "RLI " + login(message[1], message[2]);
         } else if(message[0] == "LOU") { // User requests for logout
-            return "RLO "+ logout(message[1], message[2], users);
+            return "RLO "+ logout(message[1], message[2]);
         } else if(message[0] == "UNR") {
-            return "RUR " + unregister(message[1], message[2], users);
+            return "RUR " + unregister(message[1], message[2]);
         } else if(message[0] == "LMA") {
-            return "RMA " + myauctions(message[1], users);
+            return "RMA " + myauctions(message[1]);
         } else if(message[0] == "LMB") {
-            return "RMB " + mybids(message[1], users);
+            return "RMB " + mybids(message[1]);
         } else if(message[0] == "LST") {
-            return "RLS " + list(auctions);
+            return "RLS " + list();
         } else if(message[0] == "show_record") {
             //mybids(message[1], message[2]);
         } else if(message[0] == "OPA") {
@@ -236,53 +235,43 @@ string vector_analysis(vector<string> message, Users &users, Auctions &auctions)
     return "Weird";
 }
 
-string login(string UID, string password, Users &users) {
+string login(string UID, string password) {
 
-    User *user = users.get_user(UID);
 
     if (!possible_UID(UID) || !possible_password(password)) {
         return "ERR";
 
-    } else if (user == nullptr) { // new user
+    } else if (!user_directory_exists(UID)) {// new user
 
-        string uid_pathname = "USERS/" + UID;
-        string pass_pathname = uid_pathname + "/" + UID + "_pass.txt";
-        string login_pathname = uid_pathname + "/" + UID + "_login.txt";
-        string hosted_pathname = uid_pathname + "/" + "HOSTED";
-        string bids_pathname = uid_pathname + "/" + "BIDDED";
+        string uid_dir_path = "USERS/" + UID;
+        string pass_path = uid_dir_path + "/" + UID + "_pass.txt";
+        string login_path = uid_dir_path + "/" + UID + "_login.txt";
+        string hosted_dir_path = uid_dir_path + "/" + "HOSTED";
+        string bids_dir_path = uid_dir_path + "/" + "BIDDED";
 
-        users.add_user(User(UID, password, uid_pathname, pass_pathname, login_pathname, hosted_pathname, bids_pathname));
+        mkdir(uid_dir_path.c_str(), 0700);
+        mkdir(hosted_dir_path.c_str(), 0700);
+        mkdir(bids_dir_path.c_str(), 0700);
 
-        user = users.get_user(UID);
-
-        mkdir((user->get_uid_pathname()).c_str(), 0700);
-        mkdir((user->get_hosted_pathname()).c_str(), 0700);
-        mkdir((user->get_bids_pathname()).c_str(), 0700);
-
-        create_pass_file(*user);
-        create_login_file(*user);
+        create_pass_file(UID, password);
+        create_login_file(UID);
 
         return "REG";
 
-    } else if (user->is_unregistered()) { // user existed but unregistered
+    } else if (check_user_login_file(UID) == 0 && check_user_password_file(UID) == "") { // user existed but unregistered
         
-        // TODO : add hosted and bidded auctions to user vectors
-        user->re_register(password);
-
-        create_pass_file(*user);
-        create_login_file(*user);
+        create_login_file(UID);
+        create_pass_file(UID, password);
 
         return "OK";
 
-    } else if (user->is_logged_out()) { // user exists, is registered, and logged out
+    } else if (check_user_login_file(UID) == 0 && check_user_password_file(UID) != "") { // user exists, is registered, and logged out
 
-        if (user->getPassword() != password) {
+        if (password != check_user_password_file(UID)) {
             return "NOK";
         }
 
-        user->set_logged_in();
-
-        create_login_file(*user);
+        create_login_file(UID);
 
         return "OK";
 
@@ -296,128 +285,105 @@ string login(string UID, string password, Users &users) {
 
 }
 
-string logout(string UID, string password, Users &users) { // logged in and reg, logged out and reg, logged out and unr
+string logout(string UID, string password) { // logged in and reg, logged out and reg, logged out and unr
 
-    cout << UID << endl;
-    User *user = users.get_user(UID);
-
-    if (!possible_UID(UID) || !possible_password(password)) {
-        return "ERR";
-
-    } else if (user == nullptr) { // user never existed (never registered before)
+    if (!user_directory_exists(UID)) { // user never existed (never registered before)
         return "UNR";
 
-    } else if (user->is_logged_in() && user->is_unregistered()) {
-        return "IMPOSSIBLE";
+    } else if (check_user_login_file(UID) != 0 && check_user_password_file(UID) == "") { // user logged in but unregistered
+        return "ERR";
 
-    } else if ((user->is_logged_out() && !(user->is_unregistered()))) { // user exists, is registered, and logged out
+    } else if (check_user_login_file(UID) == 0 && check_user_password_file(UID) != "") { // user exists, is registered, and logged out
         return "NOK";
 
     } else { // user exists, is registered, and logged in
-        if (user->getPassword() != password) {
+
+        if (check_user_password_file(UID) != password) {
             return "NOK";
         }
-        user->set_logged_out();
-        // Delete login file from user
+
+        delete_login_file(UID); // delete login file from user
+
+        return "OK";
+    }
+
+    return "ERR";
+
+}
+
+string unregister(string UID, string password) { // logged in and reg, logged out and reg, logged out and unr
+
+    if (!user_directory_exists(UID)) { // user never existed (never registered before)
+        return "UNR";
+
+    } else if (check_user_login_file(UID) != 0 && check_user_password_file(UID) == "") { // user logged in but unregistered
+        return "ERR";
+
+    } else if (check_user_login_file(UID) == 0 && check_user_password_file(UID) != "") { // user exists, is registered, and logged out
+        return "NOK";
+
+    } else { // user exists, is registered, and logged in
         
-        delete_login_file(*user);
-
-        return "OK";
-    }
-
-    return "ERR";
-
-}
-
-string unregister(string UID, string password, Users &users) { // logged in and reg, logged out and reg, logged out and unr
-
-    User *user = users.get_user(UID);
-
-    if (!possible_UID(UID) || !possible_password(password)) {
-        return "ERR";
-
-    } else if (user == nullptr) { // user never existed (never registered before)
-        return "UNR";
-
-    } else if (user->is_logged_in() && user->is_unregistered()) {
-        return "IMPOSSIBLE";
-
-    } else if ((user->is_logged_out() && !(user->is_unregistered()))) { // user exists, is registered, and logged out
-        return "NOK";
-
-    } else { // user exists, is registered, and logged in
-        if (user->getPassword() != password) {
+        if (check_user_password_file(UID) != password) {
             return "NOK";
         }
-        user->set_unregistered();
-        user->set_logged_out();
-        // Delete login file from user
-        delete_login_file(*user);
-        delete_pass_file(*user);
+
+        delete_login_file(UID);
+        delete_pass_file(UID);
 
         return "OK";
     }
 
     return "ERR";
 
-
-
 }
 
-string myauctions(string UID, Users &users) {
+string myauctions(string UID) {
 
-    User *user = users.get_user(UID);
-    vector<Auction> *hosted = user->get_hosted();
-
-    if (user == nullptr) {
-        return "ERR";
-    }
-    else if (user->is_logged_out()) {
+    if (!user_directory_exists(UID) || check_user_login_file(UID) == 0) { // user never existed or user unregistered or user logged out
         return "NLG";
-    } else if (hosted->size() == 0) {
+    } else if (user_hosted_directory_empty(UID)) { // user never hosted an auction
         return "NOK";
-    } else {
+    } else { // user hosted at least one auction and is logged in
         string message = "OK ";
-        for (Auction auction : *hosted) {
+
+        // TODO get all auctions hosted by user and add them to message
+        /* for (Auction auction : *hosted) {
             message += auction.get_AID() + " " + to_string(auction.get_status()) + " ";
-        }
+        } */
         return message;
     }
 }
 
-string mybids(string UID, Users &users) {
-    
-    User *user = users.get_user(UID);
-    vector<Auction> *bidded = user->get_bidded();
+string mybids(string UID) {
 
-    if (user == nullptr) {
-        return "ERR";
-    }
-    else if (user->is_logged_out()) {
+    if (!user_directory_exists(UID) || check_user_login_file(UID) == 0) { // user never existed or user unregistered or user logged out
         return "NLG";
-    } else if (bidded->size() == 0) {
+    } else if (user_bidded_directory_empty(UID)) { // user never bidded an auction
         return "NOK";
-    } else {
+    } else { // user bidded at least one auction and is logged in
         string message = "OK ";
-        for (Auction auction : *bidded) {
+
+        // TODO get all auctions bidded by user and add them to message
+        /* for (Auction auction : *bidded) {
             message += auction.get_AID() + " " + to_string(auction.get_status()) + " ";
-        }
+        } */
         return message;
     }
 
 }
 
-string list(Auctions &auctions) {
+string list() {
 
-    vector<Auction> *all_auctions = auctions.get_all_auctions();
-
-    if (all_auctions->size() == 0) {
+    if (auction_directory_empty()) { // no auctions exist
         return "NOK";
     } else {
         string message = "OK ";
-        for (Auction auction : *all_auctions) {
+
+        // TODO get all auctions and add them to message
+        /* for (Auction auction : *all_auctions) {
             message += auction.get_AID() + " " + to_string(auction.get_status()) + " ";
-        }
+        } */
         return message;
     }
 

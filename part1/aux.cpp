@@ -14,10 +14,12 @@
 #include <sys/stat.h>
 #include <chrono>
 #include <thread>
+#include <filesystem>
 
 #include "headers.h"
 
 using namespace std;
+namespace fs = std::filesystem;
 
 /*
 * Checks if condition is true. In that case, exits with error code 1.
@@ -33,14 +35,113 @@ void safe_stop(int signal) {
 int check_file_size(const char *fname) {
     struct stat filestat; 
     int ret_stat;
-    
+
     ret_stat = stat(fname, &filestat);
 
     if ( ret_stat == -1 || filestat.st_size == 0)
         return (0);
-    
+
     return(filestat.st_size);
 }
+
+int check_user_login_file(string UID) {
+    if (UID == "") {
+        return 0;
+    }
+    string pathname = "USERS/" + UID + "/" + UID + "_login.txt";
+    return check_file_size(pathname.c_str());
+}
+
+string check_user_password_file(string UID) {
+
+    if (UID == "") {
+        return "";
+    }
+    
+    FILE *fp = NULL;
+
+    string pathname = "USERS/" + UID + "/" + UID + "_pass.txt";
+
+    if (check_file_size(pathname.c_str()) == 0) {
+        return "";
+    }
+
+    fp = fopen(pathname.c_str(), "r");
+    if (fp == NULL) {
+        return "";
+    }
+
+    char pass[9];
+    memset(pass, '\0', 9);
+    fscanf(fp, "%s", pass);
+
+    return pass;
+}
+
+string check_auction_start_file(string AID) {
+    
+    FILE *fp = NULL;
+
+    string pathname = "AUCTIONS/" + AID + "/" + AID + "_start.txt";
+
+    if (check_file_size(pathname.c_str()) == 0) {
+        return "";
+    }
+
+    fp = fopen(pathname.c_str(), "r");
+    if (fp == NULL) {
+        return "";
+    }
+
+    char content[128];
+    memset(content, '\0', 128);
+    fscanf(fp, "%s", content);
+
+    return content;
+}
+
+string check_auction_end_file(string AID) {
+    
+    FILE *fp = NULL;
+
+    string pathname = "AUCTIONS/" + AID + "/" + AID + "_end.txt";
+
+    if (check_file_size(pathname.c_str()) == 0) {
+        return "";
+    }
+
+    fp = fopen(pathname.c_str(), "r");
+    if (fp == NULL) {
+        return "";
+    }
+
+    char content[128];
+    memset(content, '\0', 128);
+    fscanf(fp, "%s", content);
+
+    return content;
+}
+
+bool user_directory_exists(string UID) {
+    string directoryPath = "USERS/" + UID;
+    return (fs::exists(directoryPath) && fs::is_directory(directoryPath) && UID != "");
+}
+
+bool user_hosted_directory_empty(string UID) {
+    string directoryPath = "USERS/" + UID + "/HOSTED";
+    return (fs::exists(directoryPath) && fs::is_directory(directoryPath) && fs::is_empty(directoryPath));
+}
+
+bool user_bidded_directory_empty(string UID) {
+    string directoryPath = "USERS/" + UID + "/BIDDED";
+    return (fs::exists(directoryPath) && fs::is_directory(directoryPath) && fs::is_empty(directoryPath));
+}
+
+bool auction_directory_empty() { // TODO WHY DOESNT THIS ONE WORK
+    string directoryPath = "AUCTIONS";
+    return (fs::exists(directoryPath) && fs::is_directory(directoryPath) && fs::is_empty(directoryPath));
+}
+
 
 bool possible_UID(string UID) {
     if(UID.size() != 6) {
@@ -153,26 +254,30 @@ vector<string> string_to_vector(string str) {
 
 }
 
-ssize_t create_pass_file(User &user) {
+ssize_t create_pass_file(string UID, string password) {
 
     FILE *fp = NULL;
 
-    fp = fopen((user.get_pass_pathname()).c_str(), "w");
+    string pathname = "USERS/" + UID + "/" + UID + "_pass.txt";
+
+    fp = fopen(pathname.c_str(), "w");
     if (fp == NULL) {
         return -1;
     }
-    fprintf(fp, "%s\n", user.getPassword().c_str());
+    fprintf(fp, "%s\n", password.c_str());
     fclose(fp);
 
     return 1;
 
 }
 
-ssize_t create_login_file(User &user) {
+ssize_t create_login_file(string UID) {
 
     FILE *fp = NULL;
 
-    fp = fopen((user.get_login_pathname()).c_str(), "w");
+    string pathname = "USERS/" + UID + "/" + UID + "_login.txt";
+
+    fp = fopen(pathname.c_str(), "w");
     if (fp == NULL) {
         return -1;
     }
@@ -261,17 +366,17 @@ ssize_t create_hosted_file(User &user, Auction &auction) {
 
 }
 
-ssize_t delete_login_file(User &user) {
+ssize_t delete_login_file(string UID) {
 
-    unlink(user.get_login_pathname().c_str());
+    unlink(("USERS/" + UID + "/" + UID + "_login.txt").c_str());
 
     return 1;
 
 }
 
-ssize_t delete_pass_file(User &user) {
+ssize_t delete_pass_file(string UID) {
 
-    unlink(user.get_pass_pathname().c_str());
+    unlink(("USERS/" + UID + "/" + UID + "_pass.txt").c_str());
 
     return 1;
 
