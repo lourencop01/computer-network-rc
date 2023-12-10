@@ -43,7 +43,7 @@ int main() {
     stop.sa_handler = safe_stop; // set handler to safe_stop function
     check(sigaction(SIGINT, &stop, NULL) == -1, "as_40"); // set signal handler to safe_stop for SIGINT
 
-    std::thread udpThread(udp_server, std::ref(users), std::ref(auctions));
+    thread udpThread(udp_server, std::ref(users), std::ref(auctions));
 
     tcp_server(users, auctions);
 
@@ -228,8 +228,8 @@ string vector_analysis(vector<string> message, Users &users, Auctions &auctions)
             //mybids(message[1], message[2]);
         } else if(message[0] == "OPA") {
             return "ROA " + open(message[1], message[2], message[3], message[4], message[5], message[6], auctions, users);
-        } else if(message[0] == "exit") {
-            //exit(0);
+        } else if(message[0] == "CLS") {
+            return "RCL " + close(message[1], message[2], message[3], users, auctions);
         } else {
             return "ERR";
         }
@@ -292,7 +292,7 @@ string login(string UID, string password, Users &users) {
         return "LOG";
     }
 
-    return "WEIRD";
+    return "ERR";
 
 }
 
@@ -325,7 +325,7 @@ string logout(string UID, string password, Users &users) { // logged in and reg,
         return "OK";
     }
 
-    return "WEIRD";
+    return "ERR";
 
 }
 
@@ -358,14 +358,14 @@ string unregister(string UID, string password, Users &users) { // logged in and 
         return "OK";
     }
 
-    return "WEIRD";
+    return "ERR";
 
 
 
 }
 
 string myauctions(string UID, Users &users) {
-    cout << UID << endl;
+
     User *user = users.get_user(UID);
     vector<Auction> *hosted = user->get_hosted();
 
@@ -457,10 +457,38 @@ string open(string UID, string password, string name, string start_value, string
             return "OK " + AID_string;
         }
         
-        return "WEIRD2";
+        return "ERR";
     }
 
-    return "WEIRD";
+    return "ERR";
+
+}
+
+string close(string UID, string password, string AID, Users &users, Auctions &auctions) {
+
+    User *user = users.get_user(UID);
+    Auction *auction = auctions.get_auction(AID);
+
+    if (user == nullptr || user->is_logged_out() || user->is_unregistered()) { // user never existed (never registered before) or logged out
+        return "NLG";
+    } else if (auction == nullptr) { // Auction does not exist
+        return "EAU";
+    } else if (auction->get_hosted_by() != UID) { // Auction was not hosted by user logged in
+        return "EOW";
+    } else if (auction->get_status() == 0) { // Auction is already closed
+        return "END";
+    } else { // user exists, is registered, and logged in and auction is created and ongoing
+        
+        if (user->getPassword() != password) {
+            return "ERR";
+        }
+
+        create_end_aid_file(*auction); // create END_AID.txt file
+        
+        return "OK";
+    }
+
+    return "ERR";
 
 }
 

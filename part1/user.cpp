@@ -102,7 +102,7 @@ int tcp_message(char *asip, char *port, string message) {
         // Append file size to the message
         message += " " + to_string(file_size) + " ";
     }
-
+    cout << "message: " << message << endl;
     strcpy(buffer, message.c_str());
     cout << "buffer: " << buffer << endl;
 

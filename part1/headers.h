@@ -232,6 +232,15 @@ class User {
         vector<Auction>* get_bidded() {
             return &(this->bidded);
         }
+
+        Auction* get_hosted(string AID) {
+            for(size_t i = 0; i < this->hosted.size(); i++) {
+                if(this->hosted[i].get_AID() == AID) {
+                    return &this->hosted[i];
+                }
+            }
+            return nullptr;
+        } 
         bool is_logged_in() const {
             return logged_in;
         }
@@ -414,6 +423,7 @@ ssize_t create_pass_file(User &user);
 ssize_t create_login_file(User &user);
 ssize_t create_start_aid_file(Auction &auction);
 ssize_t create_hosted_file(User &user, Auction &auction);
+ssize_t create_end_aid_file(Auction &auction);
 ssize_t delete_login_file(User &user);
 ssize_t delete_pass_file(User &user);
 void load_users(Users &users);
@@ -437,5 +447,6 @@ string myauctions(string UID, Users &users);
 string mybids(string UID, Users &users);
 string list(Auctions &auctions);
 string open(string UID, string password, string name, string start_value, string time_active, string fname, Auctions &auctions, Users &users);
+string close(string UID, string password, string AID, Users &users, Auctions &auctions);
 
 #endif // AUX_H

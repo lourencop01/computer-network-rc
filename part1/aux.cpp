@@ -333,6 +333,7 @@ void monitorAuctionEnd(Auction& auction) {
         time_active = auction.get_time_active() - (time(NULL) - auction.get_start_time_1970());
         this_thread::sleep_for(chrono::seconds(1));
         if (check_file_size((auction.get_end_aid_pathname()).c_str()) != 0) {
+            cout << "closed by user" << endl;
             return;
         }
     }
