@@ -409,6 +409,7 @@ class Users {
 /* aux.c file functions */
 void check(bool condition, string message);
 void safe_stop(int signal);
+string int_to_three_digit_string(int number);
 bool possible_UID(string UID);
 bool possible_password(string password);
 bool possible_AID(string AID);
@@ -428,18 +429,19 @@ bool user_directory_exists(string UID);
 bool user_hosted_directory_empty(string UID);
 bool user_bidded_directory_empty(string UID);
 bool auction_directory_empty();
+string count_directories(string directoryPath);
 
 ssize_t create_pass_file(string UID, string password);
 ssize_t create_login_file(string UID);
-ssize_t create_start_aid_file(Auction &auction);
-ssize_t create_hosted_file(User &user, Auction &auction);
-ssize_t create_end_aid_file(Auction &auction);
+long int create_start_aid_file(string AID, string name, string start_value, string time_active, string fname, string UID);
+ssize_t create_hosted_file(string UID, string AID);
+ssize_t create_end_aid_file(string AID, int time_since_1970);
 ssize_t delete_login_file(string UID);
 ssize_t delete_pass_file(string UID);
 void load_users(Users &users);
 string intToThreeDigitString(int number);
 int check_file_size(const char *fname);
-void monitorAuctionEnd(Auction& auction);
+void monitorAuctionEnd(string AID, int time_active, int start_time_1970);
 
 /* user.cpp file functions */
 int tcp_message(char *asip, char *port, string message);
@@ -456,7 +458,7 @@ string unregister(string UID, string password);
 string myauctions(string UID);
 string mybids(string UID);
 string list();
-string open(string UID, string password, string name, string start_value, string time_active, string fname, Auctions &auctions, Users &users);
+string open(string UID, string password, string name, string start_value, string time_active, string fname);
 string close(string UID, string password, string AID, Users &users, Auctions &auctions);
 
 #endif // AUX_H

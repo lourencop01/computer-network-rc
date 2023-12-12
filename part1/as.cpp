@@ -226,7 +226,7 @@ string vector_analysis(vector<string> message, Users &users, Auctions &auctions)
         } else if(message[0] == "show_record") {
             //mybids(message[1], message[2]);
         } else if(message[0] == "OPA") {
-            return "ROA " + open(message[1], message[2], message[3], message[4], message[5], message[6], auctions, users);
+            return "ROA " + open(message[1], message[2], message[3], message[4], message[5], message[6]);
         } else if(message[0] == "CLS") {
             return "RCL " + close(message[1], message[2], message[3], users, auctions);
         } else {
@@ -389,38 +389,37 @@ string list() {
 
 }
 
-string open(string UID, string password, string name, string start_value, string time_active, string fname, Auctions &auctions, Users &users) {
+string open(string UID, string password, string name, string start_value, string time_active, string fname) {
 
-    User *user = users.get_user(UID);
+    string AID = "";
 
-    int AID = -1;
-
-    if (user == nullptr || user->is_logged_out() || user->is_unregistered()) { // user never existed (never registered before) or logged out
+    if (!user_directory_exists(UID) || check_user_login_file(UID) == 0) { // user never existed (never registered before) or logged out
         return "NLG";
 
     } else { // user exists, is registered, and logged in
         
-        if (user->getPassword() != password) {
+        if (check_user_password_file(UID) != password) {
             return "ERR";
         }
 
-        if ((AID = auctions.add_auction(name, fname, stoi(start_value), stoi(time_active), UID)) == -1) {
+        if ((AID = count_directories("AUCTIONS")) == "-1") {
             return "NOK";
+        
         } else {
-            string AID_string = auctions.intToThreeDigitString(AID);
-            Auction *auction = auctions.get_auction(AID_string);
+
+            string auction_pathname = "AUCTIONS/" + AID;
+            string auction_bids_pathname = auction_pathname + "/BIDS";
             
-            mkdir((auction->get_auction_pathname()).c_str(), 0700); // create auction directory named with its AID under AUCTIONS folder
-            mkdir((auction->get_bids_pathname()).c_str(), 0700); // create a BIDS folder under the auction directory
+            mkdir(auction_pathname.c_str(), 0700); // create auction directory named with its AID under AUCTIONS folder
+            mkdir(auction_bids_pathname.c_str(), 0700); // create a BIDS folder under the auction directory
             
-            create_start_aid_file(*auction); // create START_AID.txt file
+            long int start_time_1970 = create_start_aid_file(AID, name, start_value, time_active, fname, UID); // create START_AID.txt file
             // TODO copy asset_fname's file to the auction directory
 
-            timer_thread = thread(monitorAuctionEnd, ref(*auction)); // create thread to monitor auction end
+            timer_thread = thread(monitorAuctionEnd, AID, stoi(time_active), start_time_1970); // create thread to monitor auction end
             
-            user->add_hosted(*auction); // add auction to user's hosted vector
-            create_hosted_file(*user, *auction); // create HOSTED file
-            return "OK " + AID_string;
+            create_hosted_file(UID, AID); // create HOSTED file
+            return "OK " + AID;
         }
         
         return "ERR";
@@ -449,7 +448,7 @@ string close(string UID, string password, string AID, Users &users, Auctions &au
             return "ERR";
         }
 
-        create_end_aid_file(*auction); // create END_AID.txt file
+        //create_end_aid_file(*auction); // create END_AID.txt file
         
         return "OK";
     }

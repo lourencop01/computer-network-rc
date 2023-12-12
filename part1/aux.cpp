@@ -32,6 +32,15 @@ void safe_stop(int signal) {
     exit(0);
 }
 
+string int_to_three_digit_string(int number) {
+    if (number > 999 || number < 0) {
+        return "LIMIT EXCEEDED";
+    }
+    ostringstream oss;
+    oss << setw(3) << setfill('0') << number;
+    return oss.str();
+}
+
 int check_file_size(const char *fname) {
     struct stat filestat; 
     int ret_stat;
@@ -129,17 +138,35 @@ bool user_directory_exists(string UID) {
 
 bool user_hosted_directory_empty(string UID) {
     string directoryPath = "USERS/" + UID + "/HOSTED";
-    return (fs::exists(directoryPath) && fs::is_directory(directoryPath) && fs::is_empty(directoryPath));
+    return (fs::exists(directoryPath) && fs::is_directory(directoryPath) && fs::is_empty(directoryPath) && UID != "");
 }
 
 bool user_bidded_directory_empty(string UID) {
     string directoryPath = "USERS/" + UID + "/BIDDED";
-    return (fs::exists(directoryPath) && fs::is_directory(directoryPath) && fs::is_empty(directoryPath));
+    return (fs::exists(directoryPath) && fs::is_directory(directoryPath) && fs::is_empty(directoryPath) && UID != "");
 }
 
 bool auction_directory_empty() { // TODO WHY DOESNT THIS ONE WORK
     string directoryPath = "AUCTIONS";
+    if (fs::exists(directoryPath)){ cout << "exists" << endl; }
+    if (fs::is_directory(directoryPath)){ cout << "is dir" << endl; }
+    if (fs::is_empty(directoryPath)){ cout << "is empty" << endl; } 
     return (fs::exists(directoryPath) && fs::is_directory(directoryPath) && fs::is_empty(directoryPath));
+}
+
+string count_directories(string directoryPath) {
+    int count = 0;
+    for (const auto & entry : fs::directory_iterator(directoryPath)) {
+        if (fs::is_directory(entry)) {
+            count++;
+        }
+    }
+
+    if (count > 999) {
+        return "-1";
+    }
+
+    return int_to_three_digit_string(count);
 }
 
 
@@ -288,11 +315,13 @@ ssize_t create_login_file(string UID) {
 
 }
 
-ssize_t create_start_aid_file(Auction &auction) {
+long int create_start_aid_file(string AID, string name, string start_value, string time_active, string fname, string UID) {
 
     FILE *fp = NULL;
 
-    fp = fopen((auction.get_start_aid_pathname()).c_str(), "w");
+    string pathname = "AUCTIONS/" + AID + "/" + AID + "_start.txt";
+
+    fp = fopen(pathname.c_str(), "w");
     if (fp == NULL) {
         return -1;
     }
@@ -307,28 +336,27 @@ ssize_t create_start_aid_file(Auction &auction) {
 
     long int start_time_1970 = time(NULL);
 
-    fprintf(fp, "%s %s %s %s %s %s %ld\n", auction.get_hosted_by().c_str(), auction.get_name().c_str(), auction.get_asset_fname().c_str(),
-                                          to_string(auction.get_start_value()).c_str(), to_string(auction.get_time_active()).c_str(), 
-                                          timestampStr.c_str(), start_time_1970);
-
-    auction.set_start_time_1970(start_time_1970);
+    fprintf(fp, "%s %s %s %s %s %s %ld\n", UID.c_str(), name.c_str(), fname.c_str(), start_value.c_str(),
+                                            time_active.c_str(), timestampStr.c_str(), start_time_1970);
 
     fclose(fp);
 
-    return 1;
+    return start_time_1970;
 
 }
 
-ssize_t create_end_aid_file(Auction &auction) {
+ssize_t create_end_aid_file(string AID, int time_since_1970) {
     
         FILE *fp = NULL;
 
+        string end_aid_pathname = "AUCTIONS/" + AID + "/" + AID + "_end.txt";
+
         //  check if end file already exists
-        if (check_file_size((auction.get_end_aid_pathname()).c_str()) != 0) {
+        if (check_file_size(end_aid_pathname.c_str()) != 0) {
             return -1;
         }
     
-        fp = fopen((auction.get_end_aid_pathname()).c_str(), "w");
+        fp = fopen(end_aid_pathname.c_str(), "w");
         if (fp == NULL) {
             return -1;
         }
@@ -340,26 +368,24 @@ ssize_t create_end_aid_file(Auction &auction) {
         std::ostringstream oss;
         oss << std::put_time(std::localtime(&currentTime), "%Y-%m-%d %H:%M:%S");
         std::string timestampStr = oss.str();
-    
-        fprintf(fp, "%s %ld\n", timestampStr.c_str(), time(NULL) - auction.get_start_time_1970());
+        cout << "create end file " << time_since_1970 << endl;
+        fprintf(fp, "%s %ld\n", timestampStr.c_str(), time(NULL) - time_since_1970);
         fclose(fp);
-
-        auction.set_status(0);
     
         return 1;
 }
 
-ssize_t create_hosted_file(User &user, Auction &auction) {
+ssize_t create_hosted_file(string UID, string AID) {
 
     FILE *fp = NULL;
 
-    string hosted_pathname = user.get_hosted_pathname() + "/" + auction.get_AID() + ".txt";
+    string hosted_pathname = "USERS/" + UID + "/" + "HOSTED" + "/" + AID + ".txt";
 
-    fp = fopen(hosted_pathname.c_str(), "a");
+    fp = fopen(hosted_pathname.c_str(), "w");
     if (fp == NULL) {
         return -1;
     }
-    fprintf(fp, "%s\n", auction.get_AID().c_str());
+    fprintf(fp, "%s\n", AID.c_str());
     fclose(fp);
 
     return 1;
@@ -430,19 +456,22 @@ void load_users(Users &users){
     }
 }
 
-void monitorAuctionEnd(Auction& auction) {
-    //time_t endTime = auction.get_time_active() + auction.get_start_time_1970();
-    int time_active = auction.get_time_active();
+void monitorAuctionEnd(string AID, int time_active, int start_time_1970) {
 
-    while (time_active > 0) {
-        time_active = auction.get_time_active() - (time(NULL) - auction.get_start_time_1970());
+    string end_pathname = "AUCTIONS/" + AID + "/" + AID + "_end.txt";
+
+    cout << "monitoring " << AID << endl;
+    cout << "time active " << time_active << endl;
+    cout << "start time " << start_time_1970 << endl;
+
+    while (time_active > (time(NULL) - start_time_1970)) {
         this_thread::sleep_for(chrono::seconds(1));
-        if (check_file_size((auction.get_end_aid_pathname()).c_str()) != 0) {
+        if (check_file_size(end_pathname.c_str()) != 0) {
             cout << "closed by user" << endl;
             return;
         }
     }
 
     // Auction has ended, create the END file
-    create_end_aid_file(auction);
+    create_end_aid_file(AID, start_time_1970);
 }

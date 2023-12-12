@@ -26,3 +26,4 @@ clean:
 cleaner:
 	rm -f as user *.o USERS/*/*.txt AUCTIONS/*/*.txt
 	rm -r USERS/* AUCTIONS/*
+	find . -name ".DS_Store" -delete
