@@ -13,14 +13,17 @@
 #include <thread>
 #include <mutex>
 #include <sys/mman.h>
+#include <filesystem>
 
 #include "headers.h"
 
 #define PORT "58070"
 #define BUFSIZE 128
+#define MAXDATASIZE 1024
 #define MAXQUEUE 5
 
 using namespace std;
+namespace fs = std::filesystem;
 
 thread timer_thread;
 
@@ -52,9 +55,10 @@ int tcp_server() {
     int read_bytes = 0;
     FILE *asset_file = NULL;
 
-    char buffer[BUFSIZE], reply[128];
+    char buffer[BUFSIZE], reply[128], data[MAXDATASIZE];
     memset(buffer, '\0', BUFSIZE);
     memset(reply, '\0', 128);
+    memset(data, '\0', MAXDATASIZE);
 
     pid_t pid;
 
@@ -95,9 +99,9 @@ int tcp_server() {
 
             cout << "TCP received: " << buffer << endl;
 
-            if (string_to_vector(buffer)[0] == "OPA") {
+            vector<string> buffer_vec = string_to_vector(buffer);
 
-                vector<string> buffer_vec = string_to_vector(buffer);
+            if (buffer_vec[0] == "OPA") {
 
                 strcpy(reply, vector_analysis(buffer_vec).c_str());
 
@@ -128,14 +132,47 @@ int tcp_server() {
 
             } else {
 
-                strcpy(reply, vector_analysis(string_to_vector(buffer)).c_str());
+                strcpy(reply, vector_analysis(buffer_vec).c_str());
 
             }
+
             cout << "TCP sent: " << reply << endl;
             check((write(newfd, reply, BUFSIZE)) <= 0, "as_150");
 
+            if (string_to_vector(reply)[0] == "RSA" && string_to_vector(reply)[1] == "OK") {
+                
+                    vector<string> reply_vec = string_to_vector(reply);
+
+                    string asset_fname = reply_vec[2];
+                    int bytes_to_read = stoi(reply_vec[3]);
+                    string asset_to_copy_pathname = "AUCTIONS/" + buffer_vec[1] + "/" + asset_fname;
+
+                    if (bytes_to_read == 0) {
+                        cout << "Error with file size" << endl;
+                        return -1;
+                    }
+
+                    FILE *asset_file = fopen(asset_to_copy_pathname.c_str(), "rb");
+                    if (asset_file == NULL) {
+                        cout << "Error opening asset file" << endl;
+                        return -1;
+                    }
+    
+                    read_bytes = 0;
+                    
+                    while (bytes_to_read > 0) {
+                        read_bytes = fread(data, 1, MAXDATASIZE, asset_file);
+                        check((write(newfd, data, read_bytes)) <= 0, "as_178");
+                        bytes_to_read -= read_bytes;
+                        memset(data, '\0', BUFSIZE);
+                    }
+    
+                    fclose(asset_file);
+            }
+
             memset(buffer, '\0', BUFSIZE);
             memset(reply, '\0', 128);
+            memset(data, '\0', MAXDATASIZE);
 
             close(newfd);
 
@@ -218,10 +255,14 @@ string vector_analysis(vector<string> message) {
             return "ROA " + open(message[1], message[2], message[3], message[4], message[5], message[6]);
         } else if(message[0] == "CLS") {
             return "RCL " + close(message[1], message[2], message[3]);
+        } else if(message[0] == "SAS") {
+            return "RSA " + show_asset(message[1]);
+        } else if(message[0] == "BID") {
+            return "RBD " + bid(message[1], message[2], message[3], message[4]);
         } else {
             return "ERR";
         }
-    return "Weird";
+    return "ERR";
 }
 
 string login(string UID, string password) {
@@ -336,10 +377,17 @@ string myauctions(string UID) {
     } else { // user hosted at least one auction and is logged in
         string message = "OK ";
 
-        // TODO get all auctions hosted by user and add them to message
-        /* for (Auction auction : *hosted) {
-            message += auction.get_AID() + " " + to_string(auction.get_status()) + " ";
-        } */
+        string AID = "";
+
+        for (const auto & entry : fs::directory_iterator("USERS/" + UID + "/HOSTED")) {
+            AID = entry.path().filename().string();
+            if (auction_is_active(AID.erase(3, 4))) {
+                message += AID + " 1 ";
+            } else {
+                message += AID + " 0 ";
+            }
+        }
+
         return message;
     }
 }
@@ -353,12 +401,20 @@ string mybids(string UID) {
     } else { // user bidded at least one auction and is logged in
         string message = "OK ";
 
-        // TODO get all auctions bidded by user and add them to message
-        /* for (Auction auction : *bidded) {
-            message += auction.get_AID() + " " + to_string(auction.get_status()) + " ";
-        } */
+        string AID = "";
+
+        for (const auto & entry : fs::directory_iterator("USERS/" + UID + "/BIDDED")) {
+            AID = entry.path().filename().string();
+            if (auction_is_active(AID.erase(3, 4))) {
+                message += AID + " 1 ";
+            } else {
+                message += AID + " 0 ";
+            }
+        }
+        
         return message;
     }
+
 
 }
 
@@ -369,10 +425,18 @@ string list() {
     } else {
         string message = "OK ";
 
-        // TODO get all auctions and add them to message
-        /* for (Auction auction : *all_auctions) {
-            message += auction.get_AID() + " " + to_string(auction.get_status()) + " ";
-        } */
+        //TODO é suposto ser so quando tem algum auction ativo? e se tiver varios mas todos inativos
+
+        string AID = "";
+
+        for (const auto & entry : fs::directory_iterator("AUCTIONS")) {
+            AID = entry.path().filename().string();
+            if (auction_is_active(AID)) {
+                message += AID + " 1 ";
+            } else {
+                message += AID + " 0 ";
+            }
+        }
         return message;
     }
 
@@ -405,7 +469,7 @@ string open(string UID, string password, string name, string start_value, string
             long int start_time_1970 = create_start_aid_file(AID, name, start_value, time_active, fname, UID); // create START_AID.txt file
             // TODO copy asset_fname's file to the auction directory
 
-            timer_thread = thread(monitorAuctionEnd, AID, stoi(time_active), start_time_1970); // create thread to monitor auction end
+            timer_thread = thread(monitor_auction_end, AID, stoi(time_active), start_time_1970); // create thread to monitor auction end
             
             create_hosted_file(UID, AID); // create HOSTED file
             return "OK " + AID;
@@ -448,4 +512,58 @@ string close(string UID, string password, string AID) {
     return "ERR";
 
 }
+
+string show_asset(string AID) {
+
+    string auction_folder_pathname = "AUCTIONS/" + AID + "/";
+
+    if (!auction_directory_exists(AID)) { // Auction does not exist
+        return "NOK";
+
+    } else { // Auction folder exists
+
+        vector<string> start_file_strings = string_to_vector(auction_start_line(AID)); // UID name asset_fname start_value timeactive start_datetime(2) start_fulltime
+
+        int file_size = 0;
+
+        if ((file_size = check_file_size((auction_folder_pathname + start_file_strings[2]).c_str())) == 0) {
+            return "NOK";
+        }
+
+        return ("OK " + start_file_strings[2] + " " + to_string(file_size));
+
+    }
+
+    return "ERR";
+}
+
+string bid(string UID, string password, string AID, string value) {
+
+    if (!user_directory_exists(UID) || check_user_login_file(UID) == 0) { // user never existed (never registered before) or logged out
+        return "NLG";
+    } else if (!auction_is_active(AID)) {
+        return "NOK";
+    } else if (stoi(value) < maximum_bid(AID)) {
+        return "REF";
+    } else if (string_to_vector(auction_start_line(AID))[0] == UID) {
+        return "ILG";
+    } else {
+            
+            if (check_user_password_file(UID) != password) {
+                return "ERR";
+            }
+    
+            create_bid_file_auction(UID, AID, value);
+            create_bid_file_user(UID, AID);
+    
+            return "OK";
+    }
+
+        //TODO what if the bid is lower than the start value?
+        
+    return "ERR";
+}
+
+
+
 

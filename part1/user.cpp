@@ -97,14 +97,12 @@ int tcp_message(char *asip, char *port, string message) {
         }
 
         file_size = check_file_size(msg_str[6].c_str());
-        cout << "File size: " << file_size << endl;
 
         // Append file size to the message
         message += " " + to_string(file_size) + " ";
     }
-    cout << "message: " << message << endl;
+
     strcpy(buffer, message.c_str());
-    cout << "buffer: " << buffer << endl;
 
     write(fd, buffer, BUFSIZE);
 
@@ -129,9 +127,31 @@ int tcp_message(char *asip, char *port, string message) {
     memset(buffer, '\0', BUFSIZE);
     check((read(fd, buffer, BUFSIZE)) == -1, "us_130");
     
-    // TODO: Handle server's reply as needed
+    cout << buffer;
 
-    cout << "Server TCP replied: " << buffer << endl;
+    vector<string> buffer_vec = string_to_vector(buffer);
+
+    if (buffer_vec[0] == "RSA" && buffer_vec[1] == "OK") {
+
+        int bytes_to_read = stoi(buffer_vec[3]);
+        string file_copy_path = "./" + buffer_vec[2];
+        ssize_t bytes_read = 0;
+        
+        FILE *file_copy_fd = fopen(file_copy_path.c_str(), "wb");
+        if (file_copy_fd == NULL) {
+            cout << "Error opening file." << endl;
+            return -1;
+        }
+
+        while (bytes_to_read > 0) {
+            memset(data, '\0', MAXDATASIZE);
+            bytes_read = read(fd, data, MAXDATASIZE);
+            check(bytes_read == -1, "us_148");
+            bytes_to_read -= bytes_read;
+            fwrite(data, 1, bytes_read, file_copy_fd);
+        }
+        fclose(file_copy_fd);
+    }
 
     freeaddrinfo(res);
     close(fd);
@@ -165,7 +185,7 @@ int udp_message(char *asip, char *port, string message) {
     check(read(fd, buffer, BUFSIZE) == -1, "us_161"); // read from socket
     check(/*TODO: APANHAR ERRO DO SERVIDOR SE ELE FECHAR*/false, "us_162");
 
-    cout << "Server UDP replied: " << buffer << endl;
+    cout << buffer;
 
     freeaddrinfo(res); // free address info
     close(fd);
@@ -222,7 +242,7 @@ vector<string> string_analysis(char* str, User &user) {
 
     } else if (message.size() >= 3) {
 
-        if (message[0] == "login" && possible_UID(message[1]) && possible_password(message[2])) { // LOGIN
+        if (message[0] == "login" && possible_UID(message[1]) && possible_password(message[2]) && message.size() == 3) { // LOGIN
             user.login(message[1], message[2]);
             message = {"udp", "LIN", user.getUID(), user.getPassword()};
 
@@ -230,7 +250,7 @@ vector<string> string_analysis(char* str, User &user) {
             message.size() == 5 && possible_start_value(message[3]) && possible_time_active(message[4])) { 
             message = {"tcp", "OPA", user.getUID(), user.getPassword(), message[1], message[3], message[4], message[2]};
 
-        } else if ((message[0] == "bid" || message[0] == "b") && possible_AID(message[1]) && possible_start_value(message[2])) { // BID
+        } else if ((message[0] == "bid" || message[0] == "b") && possible_AID(message[1]) && possible_start_value(message[2]) && message.size() == 3) { // BID TODO MESSAGE SIZE = ?
             message = {"tcp", "BID", user.getUID(), user.getPassword(), message[1], message[2]};
         }
     }
