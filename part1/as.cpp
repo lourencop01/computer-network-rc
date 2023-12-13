@@ -97,8 +97,6 @@ int tcp_server() {
             read_bytes = read(newfd, buffer, BUFSIZE);
             buffer[read_bytes] = '\0';
 
-            cout << "TCP received: " << buffer << endl;
-
             vector<string> buffer_vec = string_to_vector(buffer);
 
             if (buffer_vec[0] == "OPA") {
@@ -136,7 +134,7 @@ int tcp_server() {
 
             }
 
-            cout << "TCP sent: " << reply << endl;
+            strcat(reply, "\n");
             check((write(newfd, reply, BUFSIZE)) <= 0, "as_150");
 
             if (string_to_vector(reply)[0] == "RSA" && string_to_vector(reply)[1] == "OK") {
@@ -219,12 +217,10 @@ int udp_server() {
 
         check((n = recvfrom(fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr, &addrlen)) == -1, "as_197"); // receive data from socket
         ptr += n; // update pointer to end of buffer
-        cout << "UDP received: " << buffer << endl;
-
+        
         strcpy(ptr, vector_analysis(string_to_vector(buffer)).c_str()); // convert buffer to vector
 
-        cout << "UDP sent: " << ptr << endl;
-
+        strcat(ptr, "\n"); // add '\n' to end of buffer
         check(sendto(fd, ptr, BUFSIZE, 0, (struct sockaddr*)&addr, addrlen) == -1, "as_205"); // send data to socket
 
     }
