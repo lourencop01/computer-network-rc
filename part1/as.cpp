@@ -26,25 +26,14 @@ thread timer_thread;
 
 int main() {
 
-    Users users;
-    load_users(users); // load users from USERS folder
-    users.print_all_users();
-
-    int* sharedCounter = static_cast<int*>(mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0));
-    *sharedCounter = 0;
-
-    Auctions auctions(sharedCounter);
-    //load_auctions(auctions); // load auctions from AUCTIONS folder TODO
-    //auctions.print_all_auctions();
-
     struct sigaction stop; // CTRL_C signal handler
     memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s
     stop.sa_handler = safe_stop; // set handler to safe_stop function
     check(sigaction(SIGINT, &stop, NULL) == -1, "as_40"); // set signal handler to safe_stop for SIGINT
 
-    thread udpThread(udp_server, std::ref(users), std::ref(auctions));
+    thread udpThread(udp_server);
 
-    tcp_server(users, auctions);
+    tcp_server();
 
     udpThread.join();
 
@@ -52,7 +41,7 @@ int main() {
 
 }
     
-int tcp_server(Users &users, Auctions &auctions) {
+int tcp_server() {
 
     struct addrinfo hints, *res; // hints: info we want, res: info we get
     int fd, newfd, ret; // file descriptors
@@ -110,7 +99,7 @@ int tcp_server(Users &users, Auctions &auctions) {
 
                 vector<string> buffer_vec = string_to_vector(buffer);
 
-                strcpy(reply, vector_analysis(buffer_vec, users, auctions).c_str());
+                strcpy(reply, vector_analysis(buffer_vec).c_str());
 
                 if (string_to_vector(reply)[1] == "OK") {
 
@@ -139,7 +128,7 @@ int tcp_server(Users &users, Auctions &auctions) {
 
             } else {
 
-                strcpy(reply, vector_analysis(string_to_vector(buffer), users, auctions).c_str());
+                strcpy(reply, vector_analysis(string_to_vector(buffer)).c_str());
 
             }
             cout << "TCP sent: " << reply << endl;
@@ -162,7 +151,7 @@ int tcp_server(Users &users, Auctions &auctions) {
     return 1;
 }
 
-int udp_server(Users &users, Auctions &auctions) {
+int udp_server() {
     
     struct addrinfo hints, *res;
     int fd; // file descriptor
@@ -195,7 +184,7 @@ int udp_server(Users &users, Auctions &auctions) {
         ptr += n; // update pointer to end of buffer
         cout << "UDP received: " << buffer << endl;
 
-        strcpy(ptr, vector_analysis(string_to_vector(buffer), users, auctions).c_str()); // convert buffer to vector
+        strcpy(ptr, vector_analysis(string_to_vector(buffer)).c_str()); // convert buffer to vector
 
         cout << "UDP sent: " << ptr << endl;
 
@@ -209,7 +198,7 @@ int udp_server(Users &users, Auctions &auctions) {
     return 0;
 }
 
-string vector_analysis(vector<string> message, Users &users, Auctions &auctions) {
+string vector_analysis(vector<string> message) {
 
         if(message[0] == "LIN") { // Todo: What happens if user already logged in
             return "RLI " + login(message[1], message[2]);
@@ -228,7 +217,7 @@ string vector_analysis(vector<string> message, Users &users, Auctions &auctions)
         } else if(message[0] == "OPA") {
             return "ROA " + open(message[1], message[2], message[3], message[4], message[5], message[6]);
         } else if(message[0] == "CLS") {
-            return "RCL " + close(message[1], message[2], message[3], users, auctions);
+            return "RCL " + close(message[1], message[2], message[3]);
         } else {
             return "ERR";
         }
@@ -429,26 +418,29 @@ string open(string UID, string password, string name, string start_value, string
 
 }
 
-string close(string UID, string password, string AID, Users &users, Auctions &auctions) {
+string close(string UID, string password, string AID) {
 
-    User *user = users.get_user(UID);
-    Auction *auction = auctions.get_auction(AID);
+    string end_pathname = "AUCTIONS/" + AID + "/" + AID + "_end.txt";
 
-    if (user == nullptr || user->is_logged_out() || user->is_unregistered()) { // user never existed (never registered before) or logged out
+    if (!user_directory_exists(UID) || check_user_login_file(UID) == 0) { // user never existed (never registered before) or logged out
         return "NLG";
-    } else if (auction == nullptr) { // Auction does not exist
+    } else if (!auction_directory_exists(AID)) { // Auction does not exist
         return "EAU";
-    } else if (auction->get_hosted_by() != UID) { // Auction was not hosted by user logged in
+    } else if (string_to_vector(auction_start_line(AID))[0] != UID) { // Auction was not hosted by user logged in
         return "EOW";
-    } else if (auction->get_status() == 0) { // Auction is already closed
+    } else if (check_file_size(end_pathname.c_str()) != 0) { // Auction is already closed
         return "END";
     } else { // user exists, is registered, and logged in and auction is created and ongoing
         
-        if (user->getPassword() != password) {
+        vector<string> start_file_strings = string_to_vector(auction_start_line(AID));
+
+        int start_time_1970 = stoi(start_file_strings[7]);
+
+        if (check_user_password_file(UID) != password) {
             return "ERR";
         }
 
-        //create_end_aid_file(*auction); // create END_AID.txt file
+        create_end_aid_file(AID, start_time_1970); // create END_AID.txt file
         
         return "OK";
     }

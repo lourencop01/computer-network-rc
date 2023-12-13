@@ -429,7 +429,9 @@ bool user_directory_exists(string UID);
 bool user_hosted_directory_empty(string UID);
 bool user_bidded_directory_empty(string UID);
 bool auction_directory_empty();
+bool auction_directory_exists(string AID);
 string count_directories(string directoryPath);
+string auction_start_line(string AID);
 
 ssize_t create_pass_file(string UID, string password);
 ssize_t create_login_file(string UID);
@@ -449,9 +451,9 @@ int udp_message(char *asip, char *port, string message);
 vector<string> string_analysis(char* str, User &user);
 
 /* as.cpp file functions */
-int tcp_server(Users &users, Auctions &auctions);
-int udp_server(Users &users, Auctions &auctions);
-string vector_analysis(vector<string> message, Users &users, Auctions &auctions);
+int tcp_server();
+int udp_server();
+string vector_analysis(vector<string> message);
 string login(string UID, string password);
 string logout(string UID, string password);
 string unregister(string UID, string password);
@@ -459,6 +461,6 @@ string myauctions(string UID);
 string mybids(string UID);
 string list();
 string open(string UID, string password, string name, string start_value, string time_active, string fname);
-string close(string UID, string password, string AID, Users &users, Auctions &auctions);
+string close(string UID, string password, string AID);
 
 #endif // AUX_H

@@ -154,6 +154,11 @@ bool auction_directory_empty() { // TODO WHY DOESNT THIS ONE WORK
     return (fs::exists(directoryPath) && fs::is_directory(directoryPath) && fs::is_empty(directoryPath));
 }
 
+bool auction_directory_exists(string AID) {
+    string directoryPath = "AUCTIONS/" + AID;
+    return (fs::exists(directoryPath) && fs::is_directory(directoryPath) && AID != "");
+}
+
 string count_directories(string directoryPath) {
     int count = 0;
     for (const auto & entry : fs::directory_iterator(directoryPath)) {
@@ -167,6 +172,15 @@ string count_directories(string directoryPath) {
     }
 
     return int_to_three_digit_string(count);
+}
+
+// function retrieves the first line of the file
+string auction_start_line(string AID) {
+    string pathname = "AUCTIONS/" + AID + "/" + AID + "_start.txt";
+    ifstream file(pathname);
+    string line;
+    getline(file, line);
+    return line;
 }
 
 
@@ -460,14 +474,10 @@ void monitorAuctionEnd(string AID, int time_active, int start_time_1970) {
 
     string end_pathname = "AUCTIONS/" + AID + "/" + AID + "_end.txt";
 
-    cout << "monitoring " << AID << endl;
-    cout << "time active " << time_active << endl;
-    cout << "start time " << start_time_1970 << endl;
-
     while (time_active > (time(NULL) - start_time_1970)) {
+        cout << "time active: " << time_active << " time since start: " << time(NULL) - start_time_1970 << endl;
         this_thread::sleep_for(chrono::seconds(1));
         if (check_file_size(end_pathname.c_str()) != 0) {
-            cout << "closed by user" << endl;
             return;
         }
     }
