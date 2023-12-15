@@ -116,6 +116,7 @@ class User {
 void check(bool condition, string message);
 void safe_stop(int signal);
 string int_to_three_digit_string(int number);
+string int_to_six_digit_string(int number);
 bool possible_UID(string UID);
 bool possible_password(string password);
 bool possible_AID(string AID);
@@ -130,6 +131,7 @@ int check_user_login_file(string UID);
 string check_user_password_file(string UID);
 string check_auction_start_file(string AID);
 string check_auction_end_file(string AID);
+string check_bid_file(string AID, string bid_file_name);
 bool user_directory_exists(string UID);
 bool user_hosted_directory_empty(string UID);
 bool user_bidded_directory_empty(string UID);
@@ -172,5 +174,6 @@ string open(string UID, string password, string name, string start_value, string
 string close(string UID, string password, string AID);
 string show_asset(string AID);
 string bid(string UID, string password, string AID, string value);
+string show_record(string AID);
 
 #endif // AUX_H

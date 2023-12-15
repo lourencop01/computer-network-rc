@@ -97,47 +97,61 @@ string check_user_password_file(string UID) {
 }
 
 string check_auction_start_file(string AID) {
-    
-    FILE *fp = NULL;
-
     string pathname = "AUCTIONS/" + AID + "/" + AID + "_start.txt";
+    ifstream file(pathname);
 
-    if (check_file_size(pathname.c_str()) == 0) {
-        return "";
+    if (!file.is_open()) {
+        return ""; // Unable to open file
     }
 
-    fp = fopen(pathname.c_str(), "r");
-    if (fp == NULL) {
-        return "";
+    string content;
+    if (getline(file, content)) {
+        // Successfully read the first line
+        file.close();
+        return content;
+    } else {
+        file.close();
+        return ""; // Unable to read the first line
     }
-
-    char content[128];
-    memset(content, '\0', 128);
-    fscanf(fp, "%s", content);
-
-    return content;
 }
 
 string check_auction_end_file(string AID) {
-    
-    FILE *fp = NULL;
-
     string pathname = "AUCTIONS/" + AID + "/" + AID + "_end.txt";
+    ifstream file(pathname);
 
-    if (check_file_size(pathname.c_str()) == 0) {
-        return "";
+    if (!file.is_open()) {
+        return ""; // Unable to open file
     }
 
-    fp = fopen(pathname.c_str(), "r");
-    if (fp == NULL) {
-        return "";
+    string content;
+    if (getline(file, content)) {
+        // Successfully read the first line
+        file.close();
+        return content;
+    } else {
+        file.close();
+        return ""; // Unable to read the first line
+    }
+}
+
+string check_bid_file(string AID, string bid_file_name) {
+
+    string pathname = "AUCTIONS/" + AID + "/" + "BIDS" + "/" + bid_file_name;
+    ifstream file(pathname);
+
+    if (!file.is_open()) {
+        return ""; // Unable to open file
     }
 
-    char content[128];
-    memset(content, '\0', 128);
-    fscanf(fp, "%s", content);
-
-    return content;
+    string content;
+    if (getline(file, content)) {
+        // Successfully read the first line
+        file.close();
+        return content;
+    } else {
+        file.close();
+        return ""; // Unable to read the first line
+    }
 }
 
 bool user_directory_exists(string UID) {
@@ -364,8 +378,7 @@ long int create_start_aid_file(string AID, string name, string start_value, stri
 
     long int start_time_1970 = time(NULL);
 
-    fprintf(fp, "%s %s %s %s %s %s %ld\n", UID.c_str(), name.c_str(), fname.c_str(), start_value.c_str(),
-                                            time_active.c_str(), timestampStr.c_str(), start_time_1970);
+    fprintf(fp, "%s %s %s %s %s %s %ld\n", UID.c_str(), name.c_str(), fname.c_str(), start_value.c_str(), time_active.c_str(), timestampStr.c_str(), start_time_1970);
 
     fclose(fp);
 

@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     (void) argc; // unused
     (void) argv; // unused
     char asip[32] = "localhost";
-    char port[6] = "58070";
+    char port[6] = "58073";
     
     User user("", "", "", "", "", "", "");
     
@@ -165,6 +165,7 @@ int udp_message(char *asip, char *port, string message) {
     struct addrinfo hints, *res; //hints: info we want, res: info we get
     int fd; //fd: file descriptor
     char buffer[BUFSIZE]; //pointer to buffer and buffer to store data
+    int bytes_read = 0;
 
     strcpy(buffer, message.c_str());
         
@@ -182,10 +183,22 @@ int udp_message(char *asip, char *port, string message) {
 
     memset(buffer, '\0', BUFSIZE); // initialize buffer to 0s
 
-    check(read(fd, buffer, BUFSIZE) == -1, "us_161"); // read from socket
-    check(/*TODO: APANHAR ERRO DO SERVIDOR SE ELE FECHAR*/false, "us_162");
-
+    check((bytes_read = read(fd, buffer, BUFSIZE)) == -1, "us_161"); // read from socket
+    
     cout << buffer;
+
+    if (buffer[0] == 'R' && buffer[1] == 'R' && buffer[2] == 'C' && buffer[3] == ' ' && buffer[4] == 'O' && buffer[5] == 'K' && bytes_read == BUFSIZE) {
+
+        // reads from socket until there is no more data to read
+        do {
+            bytes_read = read(fd, buffer, BUFSIZE);
+            cout << buffer;
+            memset(buffer, '\0', BUFSIZE);
+        } while (bytes_read == BUFSIZE);
+    
+    }
+
+    check(/*TODO: APANHAR ERRO DO SERVIDOR SE ELE FECHAR*/false, "us_162");
 
     freeaddrinfo(res); // free address info
     close(fd);

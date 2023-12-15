@@ -17,7 +17,7 @@
 
 #include "headers.h"
 
-#define PORT "58070"
+#define PORT "58073"
 #define BUFSIZE 128
 #define MAXDATASIZE 1024
 #define MAXQUEUE 5
@@ -193,9 +193,8 @@ int udp_server() {
     ssize_t n; // number of bytes read
     struct sockaddr_in addr; // address of the server
     socklen_t addrlen; // size of the address
-    char *ptr, buffer[BUFSIZE]; // buffer to store data
-
-    ptr = buffer;
+    char buffer[BUFSIZE], reply[BUFSIZE]; // buffer to store data
+    string reply_string = ""; // string to store reply
     
     check((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1, "as_179"); // create socket with UDP protocol
 
@@ -211,17 +210,29 @@ int udp_server() {
     while(true) {
 
         memset(buffer, '\0', BUFSIZE); // initialize buffer to '\0'
-        ptr = buffer; // reset pointer to buffer
+        memset(reply, '\0', BUFSIZE); // initialize reply to '\0'
 
         addrlen = sizeof(addr); // set address length
 
         check((n = recvfrom(fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr, &addrlen)) == -1, "as_197"); // receive data from socket
-        ptr += n; // update pointer to end of buffer
         
-        strcpy(ptr, vector_analysis(string_to_vector(buffer)).c_str()); // convert buffer to vector
+        reply_string = vector_analysis(string_to_vector(buffer)); // convert buffer to vector and analyze it
 
-        strcat(ptr, "\n"); // add '\n' to end of buffer
-        check(sendto(fd, ptr, BUFSIZE, 0, (struct sockaddr*)&addr, addrlen) == -1, "as_205"); // send data to socket
+        if (reply_string.size() > BUFSIZE) {
+            while (reply_string.size() > BUFSIZE) {
+                strcpy(reply, reply_string.substr(0, BUFSIZE).c_str()); // copy first BUFSIZE characters of reply_string to reply
+                check(sendto(fd, reply, BUFSIZE, 0, (struct sockaddr*)&addr, addrlen) == -1, "as_205"); // send data to socket
+                reply_string = reply_string.substr(BUFSIZE, reply_string.size()); // remove first BUFSIZE characters from reply_string
+                memset(reply, '\0', BUFSIZE); // initialize reply to '\0'
+            }
+            strcpy(reply, reply_string.c_str()); // copy remaining characters of reply_string to reply
+            strcat(reply, "\n"); // add '\n' to end of buffer
+            check(sendto(fd, reply, BUFSIZE, 0, (struct sockaddr*)&addr, addrlen) == -1, "as_206"); // send data to socket
+        } else {
+            strcpy(reply, reply_string.c_str()); // convert buffer to vector
+            strcat(reply, "\n"); // add '\n' to end of buffer
+            check(sendto(fd, reply, BUFSIZE, 0, (struct sockaddr*)&addr, addrlen) == -1, "as_207"); // send data to socket
+        }
 
     }
 
@@ -245,8 +256,8 @@ string vector_analysis(vector<string> message) {
             return "RMB " + mybids(message[1]);
         } else if(message[0] == "LST") {
             return "RLS " + list();
-        } else if(message[0] == "show_record") {
-            //mybids(message[1], message[2]);
+        } else if(message[0] == "SRC") {
+            return "RRC " + show_record(message[1]);
         } else if(message[0] == "OPA") {
             return "ROA " + open(message[1], message[2], message[3], message[4], message[5], message[6]);
         } else if(message[0] == "CLS") {
@@ -539,7 +550,7 @@ string bid(string UID, string password, string AID, string value) {
         return "NLG";
     } else if (!auction_is_active(AID)) {
         return "NOK";
-    } else if (stoi(value) < maximum_bid(AID)) {
+    } else if (stoi(value) <= maximum_bid(AID) || stoi(value) <= stoi(string_to_vector(auction_start_line(AID))[3])) {
         return "REF";
     } else if (string_to_vector(auction_start_line(AID))[0] == UID) {
         return "ILG";
@@ -560,6 +571,64 @@ string bid(string UID, string password, string AID, string value) {
     return "ERR";
 }
 
+string show_record(string AID) {
 
+    if (!auction_directory_exists(AID)) { // Auction does not exist
+        return "NOK";
 
+    } else { // Auction folder exists
 
+        string message = "OK ";
+
+        vector<string> start_file_strings = string_to_vector(auction_start_line(AID)); // UID name asset_fname start_value timeactive start_datetime(2) start_fulltime
+
+        message += start_file_strings[0] + " " + start_file_strings[1] + " " + start_file_strings[2] + " " + start_file_strings[3] + " " + start_file_strings[5] + " " + start_file_strings[6] + " " + int_to_six_digit_string(stoi(start_file_strings[4])) + " ";
+
+        string bid_pathname = "AUCTIONS/" + AID + "/BIDS";
+        
+        // get all bids filenames from BIDS folder, for each bid get the start_time_since_1970 time, turn them into int and then put them into into the bids_filenames vector
+        vector<vector<long int>> bids;
+        for (const auto & entry : fs::directory_iterator(bid_pathname)) {
+            vector<long int> bid;  // Create a new vector for each bid
+            bid.push_back(stol(entry.path().filename().string().erase(6, 4)));
+            bid.push_back(stol(string_to_vector(check_bid_file(AID, entry.path().filename().string()))[4]));
+            bids.push_back(bid);
+        }
+
+        // sort the bids_filenames vector by the start_time_since_1970 time
+        sort(bids.begin(), bids.end(), [](const vector<long int>& a, const vector<long int>& b) {
+            return a[1] < b[1];
+        });
+
+        // store the filename of the first 50 bids in a new vector
+        vector<long int> bids_to_show;
+        for (size_t i = 0; i < bids.size(); i++) {
+            bids_to_show.push_back(bids[i][0]);
+            if (i == 49) {
+                break;
+            }
+        }
+
+        // sort the bids_to_show vector in ascending order
+        /* sort(bids_to_show.begin(), bids_to_show.end());
+        cout << "fourth loop:" << endl;
+        for (const auto & entry : bids_to_show) {
+            cout << entry << endl;
+        } */
+
+        // for each bid in bids_to_show vector, get the bid information and add it to the message
+        for (size_t i = 0; i < bids_to_show.size(); i++) {
+            vector<string> bid_file_strings = string_to_vector(check_bid_file(AID, int_to_six_digit_string(bids_to_show[i]) + ".txt"));
+            message += "B " + bid_file_strings[0] + " " + bid_file_strings[1] + " " + bid_file_strings[2] + " " + bid_file_strings[3] + " " + int_to_six_digit_string(stoi(bid_file_strings[4])) + " ";
+        }
+
+        if (!auction_is_active(AID)) {
+            vector<string> end_file_strings = string_to_vector(check_auction_end_file(AID)); // TODO end_sec_time ou bid_sec_time?
+            message += "E " + end_file_strings[0] + " " + end_file_strings[1] + " " + end_file_strings[2] + " ";
+        }
+
+        return message;
+
+    }
+
+}
