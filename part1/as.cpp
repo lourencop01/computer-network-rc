@@ -218,21 +218,9 @@ int udp_server() {
         
         reply_string = vector_analysis(string_to_vector(buffer)); // convert buffer to vector and analyze it
 
-        if (reply_string.size() > BUFSIZE) {
-            while (reply_string.size() > BUFSIZE) {
-                strcpy(reply, reply_string.substr(0, BUFSIZE).c_str()); // copy first BUFSIZE characters of reply_string to reply
-                check(sendto(fd, reply, BUFSIZE, 0, (struct sockaddr*)&addr, addrlen) == -1, "as_205"); // send data to socket
-                reply_string = reply_string.substr(BUFSIZE, reply_string.size()); // remove first BUFSIZE characters from reply_string
-                memset(reply, '\0', BUFSIZE); // initialize reply to '\0'
-            }
-            strcpy(reply, reply_string.c_str()); // copy remaining characters of reply_string to reply
-            strcat(reply, "\n"); // add '\n' to end of buffer
-            check(sendto(fd, reply, BUFSIZE, 0, (struct sockaddr*)&addr, addrlen) == -1, "as_206"); // send data to socket
-        } else {
-            strcpy(reply, reply_string.c_str()); // convert buffer to vector
-            strcat(reply, "\n"); // add '\n' to end of buffer
-            check(sendto(fd, reply, BUFSIZE, 0, (struct sockaddr*)&addr, addrlen) == -1, "as_207"); // send data to socket
-        }
+        strcpy(reply, reply_string.c_str()); // convert buffer to vector
+        strcat(reply, "\n"); // add '\n' to end of buffer
+        check(sendto(fd, reply, strlen(reply), 0, (struct sockaddr*)&addr, addrlen) == -1, "as_207"); // send data to socket
 
     }
 
@@ -244,7 +232,7 @@ int udp_server() {
 
 string vector_analysis(vector<string> message) {
 
-        if(message[0] == "LIN") { // Todo: What happens if user already logged in
+        if(message[0] == "LIN") {
             return "RLI " + login(message[1], message[2]);
         } else if(message[0] == "LOU") { // User requests for logout
             return "RLO "+ logout(message[1], message[2]);
@@ -313,9 +301,8 @@ string login(string UID, string password) {
         return "OK";
 
     } else { // user already logged in
-        // TODO what to do in this case?
-        cout << "User already logged in" << endl;
-        return "LOG";
+
+        return "OK";
     }
 
     return "ERR";
@@ -432,8 +419,6 @@ string list() {
     } else {
         string message = "OK ";
 
-        //TODO é suposto ser so quando tem algum auction ativo? e se tiver varios mas todos inativos
-
         string AID = "";
 
         for (const auto & entry : fs::directory_iterator("AUCTIONS")) {
@@ -474,7 +459,6 @@ string open(string UID, string password, string name, string start_value, string
             mkdir(auction_bids_pathname.c_str(), 0700); // create a BIDS folder under the auction directory
             
             long int start_time_1970 = create_start_aid_file(AID, name, start_value, time_active, fname, UID); // create START_AID.txt file
-            // TODO copy asset_fname's file to the auction directory
 
             timer_thread = thread(monitor_auction_end, AID, stoi(time_active), start_time_1970); // create thread to monitor auction end
             
@@ -565,8 +549,6 @@ string bid(string UID, string password, string AID, string value) {
     
             return "OK";
     }
-
-        //TODO what if the bid is lower than the start value?
         
     return "ERR";
 }
@@ -582,7 +564,7 @@ string show_record(string AID) {
 
         vector<string> start_file_strings = string_to_vector(auction_start_line(AID)); // UID name asset_fname start_value timeactive start_datetime(2) start_fulltime
 
-        message += start_file_strings[0] + " " + start_file_strings[1] + " " + start_file_strings[2] + " " + start_file_strings[3] + " " + start_file_strings[5] + " " + start_file_strings[6] + " " + int_to_six_digit_string(stoi(start_file_strings[4])) + " ";
+        message += start_file_strings[0] + " " + start_file_strings[1] + " " + start_file_strings[2] + " " + start_file_strings[3] + " " + start_file_strings[5] + " " + start_file_strings[6] + " " + start_file_strings[4] + " ";
 
         string bid_pathname = "AUCTIONS/" + AID + "/BIDS";
         
@@ -619,11 +601,11 @@ string show_record(string AID) {
         // for each bid in bids_to_show vector, get the bid information and add it to the message
         for (size_t i = 0; i < bids_to_show.size(); i++) {
             vector<string> bid_file_strings = string_to_vector(check_bid_file(AID, int_to_six_digit_string(bids_to_show[i]) + ".txt"));
-            message += "B " + bid_file_strings[0] + " " + bid_file_strings[1] + " " + bid_file_strings[2] + " " + bid_file_strings[3] + " " + int_to_six_digit_string(stoi(bid_file_strings[4])) + " ";
+            message += "B " + bid_file_strings[0] + " " + bid_file_strings[1] + " " + bid_file_strings[2] + " " + bid_file_strings[3] + " " + bid_file_strings[4] + " ";
         }
 
         if (!auction_is_active(AID)) {
-            vector<string> end_file_strings = string_to_vector(check_auction_end_file(AID)); // TODO end_sec_time ou bid_sec_time?
+            vector<string> end_file_strings = string_to_vector(check_auction_end_file(AID));
             message += "E " + end_file_strings[0] + " " + end_file_strings[1] + " " + end_file_strings[2] + " ";
         }
 

@@ -22,11 +22,12 @@ using namespace std;
 namespace fs = std::filesystem;
 
 /*
-* Checks if condition is true. In that case, exits with error code 1.
+* Checks if condition is true. In that case, exits with error code 1. // TODO timeout server e client
+TODO: how does server end?
 */
 void check(bool condition, string message) { if(condition) { cout << message << endl; exit(1); }}
 
-void safe_stop(int signal) {
+void safe_stop(int signal) { // TODO: 
     (void) signal;
     cout << "\nExiting..." << endl;
     exit(0);
@@ -169,7 +170,7 @@ bool user_bidded_directory_empty(string UID) {
     return (fs::exists(directoryPath) && fs::is_directory(directoryPath) && fs::is_empty(directoryPath) && UID != "");
 }
 
-bool auction_directory_empty() { // TODO WHY DOESNT THIS ONE WORK
+bool auction_directory_empty() {
     string directoryPath = "AUCTIONS";
     return (fs::exists(directoryPath) && fs::is_directory(directoryPath) && fs::is_empty(directoryPath));
 }
@@ -253,7 +254,7 @@ bool possible_auction_name(string auction_name) {
         return false;
     }
     for(size_t i = 0; i < auction_name.size(); i++) {
-        if(!isalpha(auction_name[i]) && auction_name[i] != ' ') {
+        if(!isalnum(auction_name[i]) && auction_name[i] != ' ') {
             return false;
         }
     }
@@ -285,7 +286,22 @@ bool possible_time_active(string time_active) {
 }
 
 bool possible_fname(string fname) {
-    (void) fname;
+    if (fname.size() > 24) {
+        return false;
+    }
+
+    for(size_t i = 0; i < fname.size(); i++) {
+        if(!isalnum(fname[i]) && fname[i] != '-' && fname[i] != '_' && fname[i] != '.') {
+            return false;
+        }
+    }
+
+    struct stat st;
+    stat(fname.c_str(), &st);
+    if (st.st_size > 10000000) {
+        return false;
+    }
+
     return true;
 }
 

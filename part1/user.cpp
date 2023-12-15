@@ -165,7 +165,7 @@ int udp_message(char *asip, char *port, string message) {
     struct addrinfo hints, *res; //hints: info we want, res: info we get
     int fd; //fd: file descriptor
     char buffer[BUFSIZE]; //pointer to buffer and buffer to store data
-    int bytes_read = 0;
+    int bytes_read = 0, bytes_written = 0;
 
     strcpy(buffer, message.c_str());
         
@@ -177,28 +177,14 @@ int udp_message(char *asip, char *port, string message) {
 
     check(getaddrinfo(asip, port, &hints, &res) != 0, "us_153"); // get address info
 
-    check((connect(fd, res->ai_addr, res->ai_addrlen)) == -1, "us_155"); // connect to server
-
-    check(write(fd, buffer, message.size()) != (ssize_t) message.size(), "us_157"); // write to socket
+    bytes_written = sendto(fd, buffer, strlen(buffer), 0, res->ai_addr, res->ai_addrlen);
 
     memset(buffer, '\0', BUFSIZE); // initialize buffer to 0s
 
-    check((bytes_read = read(fd, buffer, BUFSIZE)) == -1, "us_161"); // read from socket
-    
-    cout << buffer;
-
-    if (buffer[0] == 'R' && buffer[1] == 'R' && buffer[2] == 'C' && buffer[3] == ' ' && buffer[4] == 'O' && buffer[5] == 'K' && bytes_read == BUFSIZE) {
-
-        // reads from socket until there is no more data to read
-        do {
-            bytes_read = read(fd, buffer, BUFSIZE);
-            cout << buffer;
-            memset(buffer, '\0', BUFSIZE);
-        } while (bytes_read == BUFSIZE);
-    
-    }
-
+    bytes_read = recvfrom(fd, buffer, 6002, 0, res->ai_addr, &res->ai_addrlen);
     check(/*TODO: APANHAR ERRO DO SERVIDOR SE ELE FECHAR*/false, "us_162");
+
+    cout << buffer;
 
     freeaddrinfo(res); // free address info
     close(fd);
@@ -263,12 +249,10 @@ vector<string> string_analysis(char* str, User &user) {
             message.size() == 5 && possible_start_value(message[3]) && possible_time_active(message[4])) { 
             message = {"tcp", "OPA", user.getUID(), user.getPassword(), message[1], message[3], message[4], message[2]};
 
-        } else if ((message[0] == "bid" || message[0] == "b") && possible_AID(message[1]) && possible_start_value(message[2]) && message.size() == 3) { // BID TODO MESSAGE SIZE = ?
+        } else if ((message[0] == "bid" || message[0] == "b") && possible_AID(message[1]) && possible_start_value(message[2]) && message.size() == 3) {
             message = {"tcp", "BID", user.getUID(), user.getPassword(), message[1], message[2]};
         }
     }
 
     return message;
 }
-
-// TODO LOAD INFORMATION FROM LAST USER IF NOT LOGGED OUT BEFORE CTRLC
