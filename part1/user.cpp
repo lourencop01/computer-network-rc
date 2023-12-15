@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <fstream>
+#include <iomanip>
 
 #include "headers.h"
 
@@ -222,6 +224,9 @@ int udp_message(char *asip, char *port, string message) {
 
     freeaddrinfo(res); // free address info
     close(fd);
+
+    (void) bytes_written;
+    (void) bytes_read;
 
     return 1;
 }

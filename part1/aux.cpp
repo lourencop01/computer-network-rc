@@ -15,6 +15,11 @@
 #include <chrono>
 #include <thread>
 #include <filesystem>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <string.h>
 
 #include "headers.h"
 
@@ -186,7 +191,7 @@ bool auction_is_active(string AID) {
 }
 
 string count_directories(string directoryPath) {
-    int count = 0;
+    int count = 1;
     for (const auto & entry : fs::directory_iterator(directoryPath)) {
         if (fs::is_directory(entry)) {
             count++;

@@ -14,6 +14,7 @@
 #include <mutex>
 #include <sys/mman.h>
 #include <filesystem>
+#include <algorithm>
 
 #include "headers.h"
 
@@ -620,13 +621,6 @@ string show_record(string AID) {
                 break;
             }
         }
-
-        // sort the bids_to_show vector in ascending order
-        /* sort(bids_to_show.begin(), bids_to_show.end());
-        cout << "fourth loop:" << endl;
-        for (const auto & entry : bids_to_show) {
-            cout << entry << endl;
-        } */
 
         // for each bid in bids_to_show vector, get the bid information and add it to the message
         for (size_t i = 0; i < bids_to_show.size(); i++) {
