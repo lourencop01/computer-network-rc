@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     (void) argc; // unused
     (void) argv; // unused
     char asip[32] = "localhost";
-    char port[6] = "58073";
+    char port[6] = "58096";
     
     User user("", "", "", "", "", "", "");
     
@@ -166,6 +166,8 @@ int udp_message(char *asip, char *port, string message) {
     int fd; //fd: file descriptor
     char buffer[BUFSIZE]; //pointer to buffer and buffer to store data
     int bytes_read = 0, bytes_written = 0;
+    socklen_t addrlen;
+    struct sockaddr_in addr;
 
     strcpy(buffer, message.c_str());
         
@@ -181,7 +183,7 @@ int udp_message(char *asip, char *port, string message) {
 
     memset(buffer, '\0', BUFSIZE); // initialize buffer to 0s
 
-    bytes_read = recvfrom(fd, buffer, 6002, 0, res->ai_addr, &res->ai_addrlen);
+    bytes_read = recvfrom(fd, buffer, 6002, 0, (struct sockaddr*)&addr, &addrlen);
     check(/*TODO: APANHAR ERRO DO SERVIDOR SE ELE FECHAR*/false, "us_162");
 
     cout << buffer;

@@ -17,7 +17,7 @@
 
 #include "headers.h"
 
-#define PORT "58073"
+#define PORT "58096"
 #define BUFSIZE 128
 #define MAXDATASIZE 1024
 #define MAXQUEUE 5
