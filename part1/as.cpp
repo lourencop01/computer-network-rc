@@ -27,7 +27,37 @@ namespace fs = std::filesystem;
 
 thread timer_thread;
 
-int main() {
+int main(int argc, char *argv[]) {
+
+    char port[6] = "58096";
+
+    if (argc == 2) {
+        if (strcmp(argv[1], "-v") == 0) {
+            
+        } 
+    } else if (argc == 3) {
+        if (strcmp(argv[1], "-p") == 0 && strlen(argv[2]) == 5) {
+            memset(port, '\0', 6);
+            strcpy(port, argv[2]);
+        } else {
+            cout << "Invalid arguments" << endl;
+            exit(1);
+        }
+    } else if (argc == 4) {
+        if (strcmp(argv[1], "-p") == 0 && strlen(argv[2]) == 5 && strcmp(argv[3], "-v") == 0) {
+            memset(port, '\0', 6);
+            strcpy(port, argv[2]);
+        } else if (strcmp(argv[1], "-v") == 0 && strcmp(argv[2], "-p") == 0 && strlen(argv[3]) == 5) {
+            memset(port, '\0', 6);
+            strcpy(port, argv[3]);
+        } else {
+            cout << "Invalid arguments" << endl;
+            exit(1);
+        }
+    } else if (argc > 4) {
+        cout << "Invalid number of arguments" << endl;
+        exit(1);
+    }
 
     struct sigaction stop; // CTRL_C signal handler
     memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s

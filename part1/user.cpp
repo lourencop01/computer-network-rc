@@ -20,10 +20,42 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 
-    (void) argc; // unused
-    (void) argv; // unused
     char asip[32] = "localhost";
     char port[6] = "58096";
+
+    if (argc == 2) {
+        cout << "Invalid number of arguments" << endl;
+        exit(1);
+    } else if (argc == 3) {
+        if (strcmp(argv[1], "-n") == 0) {
+            memset(asip, '\0', 32);
+            strcpy(asip, argv[2]);
+        } else if (strcmp(argv[1], "-p") == 0) {
+            memset(port, '\0', 6);
+            strcpy(port, argv[2]);
+        } else {
+            cout << "Invalid arguments" << endl;
+            exit(1);
+        }
+    } else if (argc == 5) {
+        if (strcmp(argv[1], "-n") == 0 && strcmp(argv[3], "-p") == 0) {
+            memset(asip, '\0', 32);
+            memset(port, '\0', 6);
+            strcpy(asip, argv[2]);
+            strcpy(port, argv[4]);
+        } else if (strcmp(argv[1], "-p") == 0 && strcmp(argv[3], "-n") == 0) {
+            memset(asip, '\0', 32);
+            memset(port, '\0', 6);
+            strcpy(asip, argv[4]);
+            strcpy(port, argv[2]);
+        } else {
+            cout << "Invalid arguments" << endl;
+            exit(1);
+        }
+    } else if (argc > 5) {
+        cout << "Invalid number of arguments" << endl;
+        exit(1);
+    }
     
     User user("", "", "", "", "", "", "");
     
