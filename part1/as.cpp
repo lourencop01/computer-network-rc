@@ -25,13 +25,13 @@
 using namespace std;
 namespace fs = std::filesystem;
 
-char port[7];
+char port[6];
 
 thread timer_thread;
 
 int main(int argc, char *argv[]) {
 
-    memset(port, '\0', 7);
+    memset(port, '\0', 6);
     strcpy(port, "58096");
 
     if (argc == 2) {
