@@ -31,7 +31,7 @@ thread timer_thread;
 
 int main(int argc, char *argv[]) {
 
-    if (argc == 2) {
+    /* if (argc == 2) {
         if (strcmp(argv[1], "-v") == 0) {
             
         } 
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
     } else if (argc > 4) {
         cout << "Invalid number of arguments" << endl;
         exit(1);
-    }
+    } */
 
     struct sigaction stop; // CTRL_C signal handler
     memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s
@@ -233,7 +233,7 @@ int udp_server() {
     hints.ai_socktype = SOCK_DGRAM; // UDP socket
     hints.ai_flags = AI_PASSIVE; // use local IP address
 
-    check(getaddrinfo(NULL, port, &hints, &res) != 0, "as_186"); // get address info
+    check(getaddrinfo(NULL, 58096, &hints, &res) != 0, "as_186"); // get address info
 
     check(::bind(fd, res->ai_addr, res->ai_addrlen) == -1, "as_188"); // bind socket to address
 
@@ -293,10 +293,7 @@ string vector_analysis(vector<string> message) {
 string login(string UID, string password) {
 
 
-    if (!possible_UID(UID) || !possible_password(password)) {
-        return "ADEUS";
-
-    } else if (!user_directory_exists(UID)) {// new user
+    if (!user_directory_exists(UID)) {// new user
 
         string uid_dir_path = "USERS/" + UID;
         string pass_path = uid_dir_path + "/" + UID + "_pass.txt";
@@ -335,7 +332,7 @@ string login(string UID, string password) {
         return "OK";
     }
 
-    return "OLA";
+    return "ERR";
 
 }
 
