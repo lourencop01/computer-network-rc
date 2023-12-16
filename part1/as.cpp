@@ -18,7 +18,6 @@
 
 #include "headers.h"
 
-#define PORT "58096"
 #define BUFSIZE 128
 #define MAXDATASIZE 1024
 #define MAXQUEUE 5
@@ -26,34 +25,35 @@
 using namespace std;
 namespace fs = std::filesystem;
 
-char port[6];
+char* PORT;
 
 thread timer_thread;
 
 int main(int argc, char *argv[]) {
-
-    memset(port, '\0', 6);
-    strcpy(port, "58096");
+    PORT = new char[6];
+    
+    memset(PORT, '\0', 6);
+    strcpy(PORT, "58096");
 
     if (argc == 2) {
         if (strcmp(argv[1], "-v") == 0) {
-            
+            // Your logic for "-v" option
         } 
     } else if (argc == 3) {
         if (strcmp(argv[1], "-p") == 0 && strlen(argv[2]) == 5) {
-            memset(port, '\0', 6);
-            strcpy(port, argv[2]);
+            memset(PORT, '\0', 6);
+            strcpy(PORT, argv[2]);
         } else {
             cout << "Invalid arguments" << endl;
             exit(1);
         }
     } else if (argc == 4) {
         if (strcmp(argv[1], "-p") == 0 && strlen(argv[2]) == 5 && strcmp(argv[3], "-v") == 0) {
-            memset(port, '\0', 6);
-            strcpy(port, argv[2]);
+            memset(PORT, '\0', 6);
+            strcpy(PORT, argv[2]);
         } else if (strcmp(argv[1], "-v") == 0 && strcmp(argv[2], "-p") == 0 && strlen(argv[3]) == 5) {
-            memset(port, '\0', 6);
-            strcpy(port, argv[3]);
+            memset(PORT, '\0', 6);
+            strcpy(PORT, argv[3]);
         } else {
             cout << "Invalid arguments" << endl;
             exit(1);

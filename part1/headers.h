@@ -156,8 +156,8 @@ int check_file_size(const char *fname);
 void monitor_auction_end(string AID, int time_active, int start_time_1970);
 
 /* user.cpp file functions */
-int tcp_message(char *asip, char *port, string message);
-int udp_message(char *asip, char *port, string message);
+int tcp_message(string message);
+int udp_message(string message);
 vector<string> string_analysis(char* str, User &user);
 
 /* as.cpp file functions */

@@ -15,42 +15,46 @@
 
 #include "headers.h"
 
-#define PORT "58096"
 #define BUFSIZE 128
 #define MAXDATASIZE 1024
 
 using namespace std;
 
-int main(int argc, char *argv[]) {
+char *PORT;
+char *ASIP;
 
-    char asip[32] = "localhost";
-    char port[6] = "58096";
+int main(int argc, char *argv[]) {
+    ASIP = new char[32];
+    PORT = new char[6];
+
+    strcpy(ASIP, "localhost");
+    strcpy(PORT, "58096");
 
     if (argc == 2) {
         cout << "Invalid number of arguments" << endl;
         exit(1);
     } else if (argc == 3) {
         if (strcmp(argv[1], "-n") == 0) {
-            memset(asip, '\0', 32);
-            strcpy(asip, argv[2]);
+            memset(ASIP, '\0', 32);
+            strcpy(ASIP, argv[2]);
         } else if (strcmp(argv[1], "-p") == 0) {
-            memset(port, '\0', 6);
-            strcpy(port, argv[2]);
+            memset(PORT, '\0', 6);
+            strcpy(PORT, argv[2]);
         } else {
             cout << "Invalid arguments" << endl;
             exit(1);
         }
     } else if (argc == 5) {
         if (strcmp(argv[1], "-n") == 0 && strcmp(argv[3], "-p") == 0) {
-            memset(asip, '\0', 32);
-            memset(port, '\0', 6);
-            strcpy(asip, argv[2]);
-            strcpy(port, argv[4]);
+            memset(ASIP, '\0', 32);
+            memset(PORT, '\0', 6);
+            strcpy(ASIP, argv[2]);
+            strcpy(PORT, argv[4]);
         } else if (strcmp(argv[1], "-p") == 0 && strcmp(argv[3], "-n") == 0) {
-            memset(asip, '\0', 32);
-            memset(port, '\0', 6);
-            strcpy(asip, argv[4]);
-            strcpy(port, argv[2]);
+            memset(ASIP, '\0', 32);
+            memset(PORT, '\0', 6);
+            strcpy(ASIP, argv[4]);
+            strcpy(PORT, argv[2]);
         } else {
             cout << "Invalid arguments" << endl;
             exit(1);
@@ -80,10 +84,10 @@ int main(int argc, char *argv[]) {
         message = string_analysis(buffer, user);
 
         if(message[0] == "udp") {
-            udp_message(asip, port, vector_to_string(message));
+            udp_message(vector_to_string(message));
 
         } else if(message[0] == "tcp") {
-            tcp_message(asip, port, vector_to_string(message));
+            tcp_message(vector_to_string(message));
 
         } else if (message[0] == "exit") {
             if (user.is_logged_in()) {
@@ -105,7 +109,7 @@ int main(int argc, char *argv[]) {
 
 }
 
-int tcp_message(char *asip, char *port, string message) {
+int tcp_message(string message) {
     struct addrinfo hints, *res;
     int fd, file_size = 0, bytes_read = 0;
     char buffer[BUFSIZE], data[MAXDATASIZE];
@@ -119,7 +123,7 @@ int tcp_message(char *asip, char *port, string message) {
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
 
-    check((getaddrinfo(asip, PORT, &hints, &res)) != 0, "us_90");
+    check((getaddrinfo(ASIP, PORT, &hints, &res)) != 0, "us_90");
     check((connect(fd, res->ai_addr, res->ai_addrlen)) == -1, "us_92");
 
     if (message.substr(0, 3) == "OPA") {
@@ -195,12 +199,11 @@ int tcp_message(char *asip, char *port, string message) {
 }
 
 
-int udp_message(char *asip, char *port, string message) {
+int udp_message(string message) {
 
     struct addrinfo hints, *res; //hints: info we want, res: info we get
     int fd; //fd: file descriptor
     char buffer[BUFSIZE]; //pointer to buffer and buffer to store data
-    int bytes_read = 0, bytes_written = 0;
     socklen_t addrlen;
     struct sockaddr_in addr;
 
@@ -212,22 +215,19 @@ int udp_message(char *asip, char *port, string message) {
     hints.ai_family = AF_INET; // IPv4
     hints.ai_socktype = SOCK_DGRAM; // UDP socket
 
-    check(getaddrinfo(asip, PORT, &hints, &res) != 0, "us_153"); // get address info
+    check(getaddrinfo(ASIP, PORT, &hints, &res) != 0, "us_153"); // get address info
 
-    bytes_written = sendto(fd, buffer, strlen(buffer), 0, res->ai_addr, res->ai_addrlen);
+    sendto(fd, buffer, strlen(buffer), 0, res->ai_addr, res->ai_addrlen);
 
     memset(buffer, '\0', BUFSIZE); // initialize buffer to 0s
 
-    bytes_read = recvfrom(fd, buffer, 6002, 0, (struct sockaddr*)&addr, &addrlen);
+    recvfrom(fd, buffer, 6002, 0, (struct sockaddr*)&addr, &addrlen);
     check(/*TODO: APANHAR ERRO DO SERVIDOR SE ELE FECHAR*/false, "us_162");
 
     cout << buffer;
 
     freeaddrinfo(res); // free address info
     close(fd);
-
-    (void) bytes_written;
-    (void) bytes_read;
 
     return 1;
 }
