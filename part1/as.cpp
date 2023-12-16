@@ -25,11 +25,11 @@
 using namespace std;
 namespace fs = std::filesystem;
 
+char port[6] = "58096";
+
 thread timer_thread;
 
 int main(int argc, char *argv[]) {
-
-    char port[6] = "58096";
 
     if (argc == 2) {
         if (strcmp(argv[1], "-v") == 0) {
@@ -105,7 +105,7 @@ int tcp_server() {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    check(getaddrinfo(NULL, PORT, &hints, &res) != 0, "as_83");
+    check(getaddrinfo(NULL, port, &hints, &res) != 0, "as_83");
     check(::bind(fd, res->ai_addr, res->ai_addrlen) == -1, "as_84");
     check(listen(fd, 5) == -1, "as_85");
 
