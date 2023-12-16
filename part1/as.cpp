@@ -25,13 +25,16 @@
 using namespace std;
 namespace fs = std::filesystem;
 
-char port[6] = "58096";
+char port[7];
 
 thread timer_thread;
 
 int main(int argc, char *argv[]) {
 
-    /* if (argc == 2) {
+    memset(port, '\0', 7);
+    strcpy(port, "58096");
+
+    if (argc == 2) {
         if (strcmp(argv[1], "-v") == 0) {
             
         } 
@@ -57,7 +60,7 @@ int main(int argc, char *argv[]) {
     } else if (argc > 4) {
         cout << "Invalid number of arguments" << endl;
         exit(1);
-    } */
+    }
 
     struct sigaction stop; // CTRL_C signal handler
     memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s
@@ -233,7 +236,7 @@ int udp_server() {
     hints.ai_socktype = SOCK_DGRAM; // UDP socket
     hints.ai_flags = AI_PASSIVE; // use local IP address
 
-    check(getaddrinfo(NULL, 58096, &hints, &res) != 0, "as_186"); // get address info
+    check(getaddrinfo(NULL, port, &hints, &res) != 0, "as_186"); // get address info
 
     check(::bind(fd, res->ai_addr, res->ai_addrlen) == -1, "as_188"); // bind socket to address
 
