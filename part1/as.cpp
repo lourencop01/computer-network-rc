@@ -294,7 +294,7 @@ string login(string UID, string password) {
 
 
     if (!possible_UID(UID) || !possible_password(password)) {
-        return "ERR";
+        return "ADEUS";
 
     } else if (!user_directory_exists(UID)) {// new user
 
@@ -335,7 +335,7 @@ string login(string UID, string password) {
         return "OK";
     }
 
-    return "ERR";
+    return "OLA";
 
 }
 
