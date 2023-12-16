@@ -15,6 +15,7 @@
 
 #include "headers.h"
 
+#define PORT "58096"
 #define BUFSIZE 128
 #define MAXDATASIZE 1024
 
@@ -118,7 +119,7 @@ int tcp_message(char *asip, char *port, string message) {
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
 
-    check((getaddrinfo(asip, port, &hints, &res)) != 0, "us_90");
+    check((getaddrinfo(asip, PORT, &hints, &res)) != 0, "us_90");
     check((connect(fd, res->ai_addr, res->ai_addrlen)) == -1, "us_92");
 
     if (message.substr(0, 3) == "OPA") {
@@ -211,7 +212,7 @@ int udp_message(char *asip, char *port, string message) {
     hints.ai_family = AF_INET; // IPv4
     hints.ai_socktype = SOCK_DGRAM; // UDP socket
 
-    check(getaddrinfo(asip, port, &hints, &res) != 0, "us_153"); // get address info
+    check(getaddrinfo(asip, PORT, &hints, &res) != 0, "us_153"); // get address info
 
     bytes_written = sendto(fd, buffer, strlen(buffer), 0, res->ai_addr, res->ai_addrlen);
 

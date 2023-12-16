@@ -18,6 +18,7 @@
 
 #include "headers.h"
 
+#define PORT "58096"
 #define BUFSIZE 128
 #define MAXDATASIZE 1024
 #define MAXQUEUE 5
@@ -108,7 +109,7 @@ int tcp_server() {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    check(getaddrinfo(NULL, port, &hints, &res) != 0, "as_83");
+    check(getaddrinfo(NULL, PORT, &hints, &res) != 0, "as_83");
     check(::bind(fd, res->ai_addr, res->ai_addrlen) == -1, "as_84");
     check(listen(fd, 5) == -1, "as_85");
 
@@ -236,7 +237,7 @@ int udp_server() {
     hints.ai_socktype = SOCK_DGRAM; // UDP socket
     hints.ai_flags = AI_PASSIVE; // use local IP address
 
-    check(getaddrinfo(NULL, port, &hints, &res) != 0, "as_186"); // get address info
+    check(getaddrinfo(NULL, PORT, &hints, &res) != 0, "as_186"); // get address info
 
     check(::bind(fd, res->ai_addr, res->ai_addrlen) == -1, "as_188"); // bind socket to address
 
