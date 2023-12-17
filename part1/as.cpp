@@ -163,13 +163,12 @@ int tcp_server() {
 
                 strcpy(reply, vector_analysis(buffer_vec).c_str());
 
-            }
-
-            strcat(reply, "\n");
-            check((write(newfd, reply, BUFSIZE)) <= 0, "as_150");
+            }            
 
             if (string_to_vector(reply)[0] == "RSA" && string_to_vector(reply)[1] == "OK") {
                 
+                    check((write(newfd, reply, BUFSIZE)) <= 0, "as_150");
+
                     vector<string> reply_vec = string_to_vector(reply);
 
                     string asset_fname = reply_vec[2];
@@ -195,8 +194,14 @@ int tcp_server() {
                         bytes_to_read -= read_bytes;
                         memset(data, '\0', BUFSIZE);
                     }
-    
+                    write(newfd, "\n", 1);
                     fclose(asset_file);
+                    
+            } else {
+
+                strcat(reply, "\n");
+                check((write(newfd, reply, BUFSIZE)) <= 0, "as_150");
+
             }
 
             memset(buffer, '\0', BUFSIZE);
