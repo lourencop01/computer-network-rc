@@ -246,8 +246,10 @@ int udp_server() {
         addrlen = sizeof(addr); // set address length
 
         check((n = recvfrom(fd, buffer, BUFSIZE, 0, (struct sockaddr*)&addr, &addrlen)) == -1, "as_197"); // receive data from socket
-        
-        reply_string = vector_analysis(string_to_vector(buffer)); // convert buffer to vector and analyze it
+
+        vector<string> buffer_vec = string_to_vector(buffer); // convert buffer to vector
+
+        reply_string = vector_analysis(buffer_vec); // convert buffer to vector and analyze it
 
         strcpy(reply, reply_string.c_str()); // convert buffer to vector
         strcat(reply, "\n"); // add '\n' to end of buffer

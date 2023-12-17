@@ -99,6 +99,7 @@ string check_user_password_file(string UID) {
     memset(pass, '\0', 9);
     fscanf(fp, "%s", pass);
     pass[8] = '\0';
+    
     fclose(fp);
 
     return pass;
@@ -332,19 +333,18 @@ string vector_to_string(vector<string> message) {
     return str;
 }
 
-vector<string> string_to_vector(string str) {
+vector<string> string_to_vector(const std::string& input) {
+    istringstream iss(input);
+    vector<std::string> words;
+    string word;
 
-    vector<string> vec;
-    stringstream ss(str);
-    string tok;
-
-    while(getline(ss, tok, ' ')) {
-        vec.push_back(tok);
+    while (iss >> word) {
+        words.push_back(word);
     }
 
-    return vec;
-
+    return words;
 }
+
 
 ssize_t create_pass_file(string UID, string password) {
 

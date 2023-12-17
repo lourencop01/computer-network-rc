@@ -125,7 +125,7 @@ bool possible_start_value(string start_value);
 bool possible_time_active(string time_active);
 bool possible_fname(string fname);
 string vector_to_string(vector<string> message);
-vector<string> string_to_vector(string str);
+vector<string> string_to_vector(const std::string& input);
 vector<string> string_analysis(char* str);
 int check_user_login_file(string UID);
 string check_user_password_file(string UID);
