@@ -518,12 +518,13 @@ void monitor_auction_end(string AID, int time_active, int start_time_1970) {
     while (time_active > (time(NULL) - start_time_1970)) {
         this_thread::sleep_for(chrono::seconds(1));
         if (check_file_size(end_pathname.c_str()) != 0) {
-            return;
+            exit(0);
         }
     }
 
     // Auction has ended, create the END file
     create_end_aid_file(AID, start_time_1970);
+    exit(0);
 }
 
 int maximum_bid(string AID) {

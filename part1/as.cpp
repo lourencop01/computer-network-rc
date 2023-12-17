@@ -27,8 +27,6 @@ namespace fs = std::filesystem;
 
 char* PORT = nullptr;
 
-thread timer_thread;
-
 int main(int argc, char* argv[]) {
     // Set default value
     const char defaultPORT[] = "58096";
@@ -93,8 +91,6 @@ int tcp_server() {
 
     pid_t pid;
 
-    size_t thread_created = 0;
-
     struct sigaction act;
     memset(&act, 0, sizeof(act));
     act.sa_handler = SIG_IGN;
@@ -156,7 +152,7 @@ int tcp_server() {
 
                     fclose(asset_file);
 
-                    thread_created = 1;
+                    //thread_created = 1;
                 }
 
             } else {
@@ -210,7 +206,7 @@ int tcp_server() {
 
             close(newfd);
 
-            if (thread_created) { timer_thread.join(); }
+            //if (thread_created) { timer_thread.join(); }
             exit(0);
         }
         do {
@@ -495,8 +491,12 @@ string open(string UID, string password, string name, string start_value, string
             
             long int start_time_1970 = create_start_aid_file(AID, name, start_value, time_active, fname, UID); // create START_AID.txt file
 
-            timer_thread = thread(monitor_auction_end, AID, stoi(time_active), start_time_1970); // create thread to monitor auction end
+            //timer_thread = thread(monitor_auction_end, AID, stoi(time_active), start_time_1970); // create thread to monitor auction end
             
+            if (fork() == 0) {
+                monitor_auction_end(AID, stoi(time_active), start_time_1970);
+            }
+
             create_hosted_file(UID, AID); // create HOSTED file
             return "OK " + AID;
         }
@@ -634,7 +634,7 @@ string show_record(string AID) {
 
         if (!auction_is_active(AID)) {
             vector<string> end_file_strings = string_to_vector(check_auction_end_file(AID));
-            message += "E " + end_file_strings[0] + " " + end_file_strings[1] + " " + end_file_strings[2] + " ";
+            message += "E " + end_file_strings[0] + " " + end_file_strings[1] + " " + end_file_strings[2];
         }
 
         return message;
