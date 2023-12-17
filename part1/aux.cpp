@@ -98,8 +98,6 @@ string check_user_password_file(string UID) {
     char pass[9];
     memset(pass, '\0', 9);
     fscanf(fp, "%s", pass);
-    //remove newline
-    pass[9] = '\0';
 
     return pass;
 }
@@ -356,7 +354,7 @@ ssize_t create_pass_file(string UID, string password) {
     if (fp == NULL) {
         return -1;
     }
-    fprintf(fp, "%s\n", password.c_str());
+    fprintf(fp, "%s", password.c_str());
     fclose(fp);
 
     return 1;
