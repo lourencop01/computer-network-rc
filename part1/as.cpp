@@ -351,7 +351,7 @@ string logout(string UID, string password) { // logged in and reg, logged out an
     } else { // user exists, is registered, and logged in
 
         if (check_user_password_file(UID) != password) {
-            return "OI";
+            return "NOK";
         }
 
         delete_login_file(UID); // delete login file from user
