@@ -130,9 +130,11 @@ int tcp_server() {
 
             vector<string> buffer_vec = string_to_vector(buffer);
 
+            string vector_analysis_reply = vector_analysis(buffer_vec);
+
             if (buffer_vec[0] == "OPA") {
 
-                strcpy(reply, vector_analysis(buffer_vec).c_str());
+                strcpy(reply, vector_analysis_reply.c_str());
 
                 if (string_to_vector(reply)[1] == "OK") {
 
@@ -161,46 +163,42 @@ int tcp_server() {
 
             } else {
 
-                strcpy(reply, vector_analysis(buffer_vec).c_str());
+                strcpy(reply, vector_analysis_reply.c_str());
 
-            }            
+            }
 
-            if (string_to_vector(reply)[0] == "RSA" && string_to_vector(reply)[1] == "OK") {
+            strcat(reply, "\n");
+            check((write(newfd, reply, BUFSIZE)) <= 0, "as_150");
+
+            if (strncmp(reply, "RSA OK", 6) == 0) {
+
+                vector<string> reply_vec = string_to_vector(reply);
+
+                string asset_fname = reply_vec[2];
+                int bytes_to_read = stoi(reply_vec[3]);
+                string asset_to_copy_pathname = "AUCTIONS/" + buffer_vec[1] + "/" + asset_fname;
+
+                if (bytes_to_read == 0) {
+                    cout << "Error with file size" << endl;
+                    return -1;
+                }
+
+                FILE *asset_file = fopen(asset_to_copy_pathname.c_str(), "rb");
+                if (asset_file == NULL) {
+                    cout << "Error opening asset file" << endl;
+                    return -1;
+                }
+
+                read_bytes = 0;
                 
-                    check((write(newfd, reply, BUFSIZE)) <= 0, "as_150");
-
-                    vector<string> reply_vec = string_to_vector(reply);
-
-                    string asset_fname = reply_vec[2];
-                    int bytes_to_read = stoi(reply_vec[3]);
-                    string asset_to_copy_pathname = "AUCTIONS/" + buffer_vec[1] + "/" + asset_fname;
-
-                    if (bytes_to_read == 0) {
-                        cout << "Error with file size" << endl;
-                        return -1;
-                    }
-
-                    FILE *asset_file = fopen(asset_to_copy_pathname.c_str(), "rb");
-                    if (asset_file == NULL) {
-                        cout << "Error opening asset file" << endl;
-                        return -1;
-                    }
-    
-                    read_bytes = 0;
-                    
-                    while (bytes_to_read > 0) {
-                        read_bytes = fread(data, 1, MAXDATASIZE, asset_file);
-                        check((write(newfd, data, read_bytes)) <= 0, "as_178");
-                        bytes_to_read -= read_bytes;
-                        memset(data, '\0', BUFSIZE);
-                    }
-                    write(newfd, "\n", 1);
-                    fclose(asset_file);
-                    
-            } else {
-
-                strcat(reply, "\n");
-                check((write(newfd, reply, BUFSIZE)) <= 0, "as_150");
+                while (bytes_to_read > 0) {
+                    read_bytes = fread(data, 1, MAXDATASIZE, asset_file);
+                    check((write(newfd, data, read_bytes)) <= 0, "as_178");
+                    bytes_to_read -= read_bytes;
+                    memset(data, '\0', BUFSIZE);
+                }
+                
+                fclose(asset_file);
 
             }
 
