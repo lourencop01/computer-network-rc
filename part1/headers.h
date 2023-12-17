@@ -22,8 +22,8 @@ class User {
         User(string UID, string password, string uid_pathname, string pass_pathname, string login_pathname, string hosted_pathname, string bids_pathname) {
             this->UID = UID;
             this->password = password;
-            this->logged_in = true;
-            this->unregistered = false;
+            this->logged_in = false;
+            this->unregistered = true;
             this->uid_pathname = uid_pathname;
             this->pass_pathname = pass_pathname;
             this->login_pathname = login_pathname;
