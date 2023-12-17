@@ -166,9 +166,11 @@ int tcp_server() {
             }            
             
             strcat(reply, "\n");
-            check((write(newfd, reply, BUFSIZE)) <= 0, "as_150");
-
+            
             if (strncmp(reply, "RSA OK", 6) == 0) {
+
+                    reply[strlen(reply) - 1] = '\0';
+                    check((write(newfd, reply, BUFSIZE)) <= 0, "as_150");
 
                     vector<string> reply_vec = string_to_vector(reply);
 
@@ -195,8 +197,11 @@ int tcp_server() {
                         bytes_to_read -= read_bytes;
                         memset(data, '\0', BUFSIZE);
                     }
+                    write(newfd, "\n", 1);
                     fclose(asset_file);
                     
+            } else {
+                check((write(newfd, reply, BUFSIZE)) <= 0, "as_150");
             }
 
             memset(buffer, '\0', BUFSIZE);
@@ -551,7 +556,7 @@ string show_asset(string AID) {
             return "NOK";
         }
 
-        return ("OK " + start_file_strings[2] + " " + to_string(file_size));
+        return ("OK " + start_file_strings[2] + " " + to_string(file_size) + " ");
 
     }
 

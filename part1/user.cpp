@@ -172,10 +172,9 @@ int tcp_message(string message) {
     if (buffer_vec[0] == "RSA" && buffer_vec[1] == "OK") {
 
         int bytes_to_read = stoi(buffer_vec[3]);
-        string file_copy_path = "./" + buffer_vec[2];
         ssize_t bytes_read = 0;
         
-        FILE *file_copy_fd = fopen(file_copy_path.c_str(), "wb");
+        FILE *file_copy_fd = fopen((buffer_vec[2]).c_str(), "wb");
         if (file_copy_fd == NULL) {
             cout << "Error opening file." << endl;
             return -1;
@@ -186,8 +185,16 @@ int tcp_message(string message) {
             bytes_read = read(fd, data, MAXDATASIZE);
             check(bytes_read == -1, "us_148");
             bytes_to_read -= bytes_read;
+            if (bytes_to_read < 0) {
+                bytes_read += bytes_to_read;
+            }
             fwrite(data, 1, bytes_read, file_copy_fd);
         }
+        
+        for (int i = 0; i > bytes_to_read; i--) {
+            cout << data[bytes_read - i] << flush;
+        }
+
         fclose(file_copy_fd);
     }
 
