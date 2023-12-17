@@ -25,35 +25,28 @@
 using namespace std;
 namespace fs = std::filesystem;
 
-char* PORT;
+char* PORT = nullptr;
 
 thread timer_thread;
 
-int main(int argc, char *argv[]) {
-    PORT = new char[6];
-    
-    memset(PORT, '\0', 6);
-    strcpy(PORT, "58096");
+int main(int argc, char* argv[]) {
+    // Set default value
+    const char defaultPORT[] = "58096";
 
-    if (argc == 2) {
-        if (strcmp(argv[1], "-v") == 0) {
-            // Your logic for "-v" option
-        } 
-    } else if (argc == 3) {
+    const char* providedPORT = defaultPORT;
+
+    if (argc == 3) {
         if (strcmp(argv[1], "-p") == 0 && strlen(argv[2]) == 5) {
-            memset(PORT, '\0', 6);
-            strcpy(PORT, argv[2]);
+            providedPORT = argv[2];
         } else {
             cout << "Invalid arguments" << endl;
             exit(1);
         }
     } else if (argc == 4) {
         if (strcmp(argv[1], "-p") == 0 && strlen(argv[2]) == 5 && strcmp(argv[3], "-v") == 0) {
-            memset(PORT, '\0', 6);
-            strcpy(PORT, argv[2]);
+            providedPORT = argv[2];
         } else if (strcmp(argv[1], "-v") == 0 && strcmp(argv[2], "-p") == 0 && strlen(argv[3]) == 5) {
-            memset(PORT, '\0', 6);
-            strcpy(PORT, argv[3]);
+            providedPORT = argv[3];
         } else {
             cout << "Invalid arguments" << endl;
             exit(1);
@@ -63,16 +56,20 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
+    // Dynamic allocation based on provided arguments
+    PORT = new char[strlen(providedPORT) + 1];
+    strcpy(PORT, providedPORT);
+
     struct sigaction stop; // CTRL_C signal handler
     memset(&stop, 0, sizeof(stop)); // initialize signal handler to 0s
     stop.sa_handler = safe_stop; // set handler to safe_stop function
     check(sigaction(SIGINT, &stop, NULL) == -1, "as_40"); // set signal handler to safe_stop for SIGINT
 
-    thread udpThread(udp_server);
-
-    tcp_server();
-
-    udpThread.join();
+    if (fork() == 0) {
+        tcp_server();
+    } else {
+        udp_server();
+    }
 
     return 0;
 

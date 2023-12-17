@@ -20,41 +20,33 @@
 
 using namespace std;
 
-char *PORT;
-char *ASIP;
+char* PORT = nullptr;
+char* ASIP = nullptr;
 
-int main(int argc, char *argv[]) {
-    ASIP = new char[32];
-    PORT = new char[6];
+int main(int argc, char* argv[]) {
+    // Set default values
+    const char defaultASIP[] = "localhost";
+    const char defaultPORT[] = "58096";
 
-    strcpy(ASIP, "localhost");
-    strcpy(PORT, "58096");
+    const char* providedASIP = defaultASIP;
+    const char* providedPORT = defaultPORT;
 
-    if (argc == 2) {
-        cout << "Invalid number of arguments" << endl;
-        exit(1);
-    } else if (argc == 3) {
+    if (argc == 3) {
         if (strcmp(argv[1], "-n") == 0) {
-            memset(ASIP, '\0', 32);
-            strcpy(ASIP, argv[2]);
+            providedASIP = argv[2];
         } else if (strcmp(argv[1], "-p") == 0) {
-            memset(PORT, '\0', 6);
-            strcpy(PORT, argv[2]);
+            providedPORT = argv[2];
         } else {
             cout << "Invalid arguments" << endl;
             exit(1);
         }
     } else if (argc == 5) {
         if (strcmp(argv[1], "-n") == 0 && strcmp(argv[3], "-p") == 0) {
-            memset(ASIP, '\0', 32);
-            memset(PORT, '\0', 6);
-            strcpy(ASIP, argv[2]);
-            strcpy(PORT, argv[4]);
+            providedASIP = argv[2];
+            providedPORT = argv[4];
         } else if (strcmp(argv[1], "-p") == 0 && strcmp(argv[3], "-n") == 0) {
-            memset(ASIP, '\0', 32);
-            memset(PORT, '\0', 6);
-            strcpy(ASIP, argv[4]);
-            strcpy(PORT, argv[2]);
+            providedASIP = argv[4];
+            providedPORT = argv[2];
         } else {
             cout << "Invalid arguments" << endl;
             exit(1);
@@ -63,7 +55,14 @@ int main(int argc, char *argv[]) {
         cout << "Invalid number of arguments" << endl;
         exit(1);
     }
-    
+
+    // Dynamic allocation based on provided arguments
+    ASIP = new char[strlen(providedASIP) + 1];
+    PORT = new char[strlen(providedPORT) + 1];
+
+    strcpy(ASIP, providedASIP);
+    strcpy(PORT, providedPORT);
+
     User user("", "", "", "", "", "", "");
     
     vector<string> message;
