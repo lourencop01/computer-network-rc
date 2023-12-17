@@ -221,10 +221,6 @@ bool possible_UID(string UID) {
         return false;
     }
 
-    if (UID[0] != '1') {
-        return false;
-    }
-
     for(size_t i = 0; i < UID.size(); i++) {
         if(!isdigit(UID[i])) {
             return false;
