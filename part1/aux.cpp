@@ -98,6 +98,8 @@ string check_user_password_file(string UID) {
     char pass[9];
     memset(pass, '\0', 9);
     fscanf(fp, "%s", pass);
+    //remove newline
+    pass[9] = '\0';
 
     return pass;
 }
