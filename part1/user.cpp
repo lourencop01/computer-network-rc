@@ -209,7 +209,7 @@ int udp_message(string message) {
 
     struct addrinfo hints, *res; //hints: info we want, res: info we get
     int fd; //fd: file descriptor
-    char buffer[BUFSIZE]; //pointer to buffer and buffer to store data
+    char buffer[6002]; //pointer to buffer and buffer to store data
     socklen_t addrlen;
     struct sockaddr_in addr;
 
@@ -230,7 +230,7 @@ int udp_message(string message) {
     recvfrom(fd, buffer, 6002, 0, (struct sockaddr*)&addr, &addrlen);
     check(/*TODO: APANHAR ERRO DO SERVIDOR SE ELE FECHAR*/false, "us_162");
 
-    cout << buffer;
+    cout << buffer << flush;
 
     freeaddrinfo(res); // free address info
     close(fd);
