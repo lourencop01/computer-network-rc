@@ -164,7 +164,8 @@ int tcp_message(string message) {
     // Read the server's reply
     memset(buffer, '\0', BUFSIZE);
     check((read(fd, buffer, BUFSIZE)) == -1, "us_130");
-    cout << buffer << flush;
+    
+    cout << buffer;
 
     vector<string> buffer_vec = string_to_vector(buffer);
 
