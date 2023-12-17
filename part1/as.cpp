@@ -346,12 +346,12 @@ string logout(string UID, string password) { // logged in and reg, logged out an
         return "ERR";
 
     } else if (check_user_login_file(UID) == 0 && check_user_password_file(UID) != "") { // user exists, is registered, and logged out
-        return "NOK";
+        return "OIII";
 
     } else { // user exists, is registered, and logged in
 
         if (check_user_password_file(UID) != password) {
-            return "NOK";
+            return "OI";
         }
 
         delete_login_file(UID); // delete login file from user
